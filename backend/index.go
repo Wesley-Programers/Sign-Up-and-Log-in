@@ -1,4 +1,4 @@
-    package main
+package main
 
 import (
 	"database/sql"
@@ -17,3 +17,34 @@ type Data struct {
 }
 
 var dataSlice []Data
+
+func handler(w http.ResponseWriter, r * http.Request) {
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	
+	if r.Method == http.MethodPost {
+		w.Header().Set("Content-Type", "text/plain: charset=utf-8")
+
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "ERROR: ", http.StatusBadRequest)
+			return
+		}
+
+
+		name := r.FormValue("name")
+		email := r.FormValue("email")
+		password := r.FormValue("password")
+		passwordString := strconv.Itoa(password)
+
+		newUsers := Data{name: name, email: email, password: password}
+		dataSlice = append(dataSlice, newUsers)
+
+	} else {
+		http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)	
+	}
+			
+}
