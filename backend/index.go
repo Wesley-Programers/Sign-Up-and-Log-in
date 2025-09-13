@@ -48,3 +48,28 @@ func handler(w http.ResponseWriter, r * http.Request) {
 	}
 			
 }
+
+func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
+
+	if db == nil {
+		log.Fatal("ERROR ON SQL TABLE") 
+	}
+	_, err := db.Exec(`
+	CREATE TABLE IF NOT EXISTS usuarios (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		name VARCHAR(100),
+		email VARCHAR(100),
+		password VARCHAR(1000),
+		created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`)
+
+	if err != nil {
+		log.Fatal("ERROR TRYING TO CREATE THE TABLE ", err)
+	}
+	
+}
+
+func main() {
+	http.HandleFunc("/", handler)	
+	fmt.Println("SERVER OPEN WITH GOLANG")
+}
