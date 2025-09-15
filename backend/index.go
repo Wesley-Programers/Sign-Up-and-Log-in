@@ -69,6 +69,45 @@ func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
 	
 }
 
+func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string) error {
+
+	query := "INSERT INTO usuarios (name, email, password) VALUES (?, ?, ?);"
+		
+	if nameData != ""  && emailData != "" && passwordData != "" {
+		_, erroInsert := databasePointer.Exec(query, nameData, emailData, passwordData)
+
+		if erroInsert != nil {
+			fmt.Println("ERROR TRYING TO INSERT THE DATA ", erroInsert)
+
+			if strings.Contains(erroInsert.Error(), "Error 1062") {
+
+				verifyHelp = true
+				if strings.Contains(erroInsert.Error(), "for key 'unique_name'") {
+
+					fmt.Printf("LAST NAME ALREADY EXISTS: %s\n", nameData)
+					nameDuplicate = true
+
+				} else if strings.Contains(erroInsert.Error(), "for key 'unique_email'") {
+
+					fmt.Printf("LAST EMAIL ALREADY EXISTS: %s\n", emailData)
+					emailDuplicate = true
+
+				} // IF STRING CONTAINS "FOR KEY 'UNIQUE_NAME"
+			} else {
+
+				verifyHelp = false
+				nameDuplicate = false
+				emailDuplicate = false
+
+			}// IF STRINGS.CONTAINS "ERROR 1062"
+		} // IF ERRO INSERT != NIL
+	} else {
+		fmt.Println("OS VALORES ESTÃO VAZIOS , PRINT DA FUNÇÃO SQL INSERT\n")
+	}
+
+	return nil
+}
+
 func main() {
 	http.HandleFunc("/", handler)	
 	fmt.Println("SERVER OPEN WITH GOLANG")
