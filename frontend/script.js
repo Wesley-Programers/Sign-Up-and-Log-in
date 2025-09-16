@@ -41,6 +41,10 @@ function sign() {
 
     });
 
+    form.addEventListener('submit', async function(a) {
+        const formData = new FormData(form)
+    });
+
 };
 
 
