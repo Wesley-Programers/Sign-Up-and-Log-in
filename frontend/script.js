@@ -1,7 +1,7 @@
 function alreadyHaveAccount() {
     setTimeout(() => {
         window.location.href = './signIn.html'
-    }, 150);
+    }, 350);
 };
 
 function sign() {
