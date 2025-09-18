@@ -26,7 +26,7 @@ func handler(w http.ResponseWriter, r * http.Request) {
 	}
 	
 	if r.Method == http.MethodPost {
-		w.Header().Set("Content-Type", "text/plain: charset=utf-8")
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 		err := r.ParseForm()
 		if err != nil {
@@ -42,6 +42,36 @@ func handler(w http.ResponseWriter, r * http.Request) {
 
 		newUsers := Data{name: name, email: email, password: password}
 		dataSlice = append(dataSlice, newUsers)
+
+		if newUsers.name != "" && newUsers.email != "" && newUsers.password != "" {
+			
+			dataSlice = append(dataSlice, newUsers)
+			fmt.Printf("\nName: %v\nemail: %v\npassword: %v\n", newUsers.name, newUsers.email, newUsers.password)
+			fmt.Println(dataSlice)
+			// fmt.Printf("%v\n", len(dataSlice))
+			nameData := newUsers.name
+			emailData := newUsers.email
+			passwordData := newUsers.password
+			database(nameData, emailData, passwordData)
+
+			fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
+			fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
+
+
+			if verifyHelp {
+				if nameDuplicate {
+					w.WriteHeader(200)
+					fmt.Println("ERROR 202")
+					return
+				}
+			} else if !verifyHelp {
+				http.Redirect(w, r, "", http.StatusFound)
+				return
+			}
+
+		} else {
+			fmt.Println("\nVALORES VAZIOS NO HANDLER")
+		}
 
 	} else {
 		http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)	
