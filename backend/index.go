@@ -79,6 +79,10 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			
 }
 
+func database(nameTest, emailTest, passwordTest string) {
+
+}
+
 func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
 
 	if db == nil {
