@@ -9,8 +9,25 @@ function sign() {
     let form = document.getElementById("form-sign-up");
         
     form.addEventListener('submit', async function(e) {
-        const emailData = document.getElementById('inputEmail').value;
 
+        const nameTest = document.getElementById("inputName").value;
+        const formData = new FormData(form)
+
+        try {
+
+            const fetchAqui = await fetch("", {
+                method: "POST",
+                body: formData
+            })
+
+            const mensagem = await fetchAqui.text()
+            alert(mensagem)
+        } catch ( error ) {
+            console.error("ERROR: ", error)
+            alert("SOME ERROR")
+        }
+        
+        const emailData = document.getElementById('inputEmail').value;
 
         let thisNameAlreadyExists = document.getElementById('nameAlreadyExits');
         let thisEmailAlreadyExists = document.getElementById('emailAlreadyExits');
