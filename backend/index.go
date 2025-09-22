@@ -20,13 +20,15 @@ var dataSlice []Data
 
 func handler(w http.ResponseWriter, r * http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "text/plain")
+
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 	
 	if r.Method == http.MethodPost {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 
 		err := r.ParseForm()
 		if err != nil {
