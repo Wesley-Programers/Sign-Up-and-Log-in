@@ -8,9 +8,8 @@ function sign() {
 
     let form = document.getElementById("form-sign-up");
         
-    form.addEventListener('submit', async function(e) {
-
-        const nameTest = document.getElementById("inputName").value;
+    form.addEventListener('submit', async (e) => {
+        
         const formData = new FormData(form)
 
         try {
@@ -20,7 +19,7 @@ function sign() {
                 body: formData
             })
 
-            const mensagem = await fetchAqui.text()
+            const mensagem = await fetchAqui.status
             alert(mensagem)
         } catch ( error ) {
             console.error("ERROR: ", error)
@@ -93,7 +92,7 @@ function newLanguage() {
         email.placeholder = 'Email';
         password.placeholder = 'Senha';
 
-    }else if (languages === "english") {
+    } else if (languages === "english") {
 
         welcome.innerHTML = 'WELCOME';
         title.innerHTML = 'SIGN UP';
