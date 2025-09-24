@@ -30,7 +30,7 @@ func handler(w http.ResponseWriter, r * http.Request) {
 	
 	if r.Method == http.MethodPost {
 
-		err := r.ParseForm()
+		err := r.ParseMultipartForm(10 << 20)
 		if err != nil {
 			http.Error(w, "ERROR: ", http.StatusBadRequest)
 			return
@@ -62,12 +62,13 @@ func handler(w http.ResponseWriter, r * http.Request) {
 
 			if verifyHelp {
 				if nameDuplicate {
-					w.WriteHeader(200)
-					fmt.Println("ERROR 202")
+					w.WriteHeader(409)
+					w.Write([]byte("User already exist")
 					return
 				}
 			} else if !verifyHelp {
-				http.Redirect(w, r, "", http.StatusFound)
+				w.WriteHeader(201)
+				w.Write([]byte("User has been created")
 				return
 			}
 
