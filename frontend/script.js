@@ -9,18 +9,19 @@ function sign() {
     let form = document.getElementById("form-sign-up");
         
     form.addEventListener('submit', async (e) => {
-        
-        const formData = new FormData(form)
+        e.preventDefault();
+        const formData = new FormData(e.target);
 
         try {
 
-            const fetchAqui = await fetch("", {
+            const fetchAqui = await fetch("/", {
                 method: "POST",
                 body: formData
             })
 
-            const mensagem = await fetchAqui.status
-            alert(mensagem)
+            const status = fetchAqui.status
+            const mensagem = await fetchAqui.text()
+            alert(status)
         } catch ( error ) {
             console.error("ERROR: ", error)
             alert("SOME ERROR")
