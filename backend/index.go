@@ -61,11 +61,17 @@ func handler(w http.ResponseWriter, r * http.Request) {
 
 
 			if verifyHelp {
+				
 				if nameDuplicate {
 					w.WriteHeader(409)
-					w.Write([]byte("User already exist")
+					w.Write([]byte("This name already exist")
+					return
+				} else if emailDuplicate {
+					w.WriteHeader(409)
+					w.Write([]byte("This email already exist"))
 					return
 				}
+							
 			} else if !verifyHelp {
 				w.WriteHeader(201)
 				w.Write([]byte("User has been created")
