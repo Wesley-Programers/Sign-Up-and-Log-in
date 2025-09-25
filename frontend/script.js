@@ -4,13 +4,21 @@ function alreadyHaveAccount() {
     }, 350);
 };
 
-function sign() {
+let form = document.getElementById("form-sign-up");
+    
+document.addEventListener("DOMContentLoaded", () => {
 
     let form = document.getElementById("form-sign-up");
         
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const formData = new FormData(e.target);
+
+        const formData = new FormData(e.target)
+        let thisNameAlreadyExists = document.getElementById('nameAlreadyExits');
+        let thisEmailAlreadyExists = document.getElementById('emailAlreadyExits');
+        let incorretEmail = document.getElementById('emailIncorrect');
+        let shortPassword = document.getElementById('shortPassword');
+
 
         try {
 
@@ -21,48 +29,66 @@ function sign() {
 
             const status = fetchAqui.status
             const mensagem = await fetchAqui.text()
-            alert(status)
+            alert(`Status: ${status} Mensagem: ${mensagem}`)
+
+            if (status === 409 && mensagem === "This name already exist") {
+                e.preventDefault()
+                thisNameAlreadyExists.style.display = 'block';
+            } else if (status === 409 && mensagem === "This email already exist") {
+                e.preventDefault()
+                thisEmailAlreadyExists.style.display = 'block';
+            } else if (status === 201 && mensagem == "Dados validos") {
+                setTimeout(() => {
+                    window.location.href = './signIn.html'
+                }, 600);
+            }
+
         } catch ( error ) {
             console.error("ERROR: ", error)
-            alert("SOME ERROR")
         }
-        
+
         const emailData = document.getElementById('inputEmail').value;
-
-        let thisNameAlreadyExists = document.getElementById('nameAlreadyExits');
-        let thisEmailAlreadyExists = document.getElementById('emailAlreadyExits');
-        let incorretEmail = document.getElementById('emailIncorrect');
-        let shortPassword = document.getElementById('shortPassword');
-
         let passwordValue = document.getElementById('inputPassword').value;
 
 
         if (emailData.includes("@email.com")) {
-            // setTimeout(() => {
-            //     window.location.href = './signIn.html'
-            // }, 600);
+
+            if (status === 409 && mensagem === "This name already exist") {
+                thisNameAlreadyExists.style.display = 'block';
+            } else if (status === 409 && mensagem === "This email already exist") {
+                thisEmailAlreadyExists.style.display = 'block';
+            } else {
+                setTimeout(() => {
+                  window.location.href = './signIn.html'
+                }, 600);  
+            }
+
         } else {
             incorretEmail.style.display = 'block';
             e.preventDefault();
         };
 
         let passwordLength = passwordValue.length;
-        if (passwordLength < 8) {
-        //     setTimeout(() => {
-        //         window.location.href = './signIn.html'
-        //     }, 600);
-        // } else {
-            shortPassword.style.display = 'block';
+        if (passwordLength >= 8) {
+
+            if (status === 409 && mensagem === "This name already exist") {
+                thisNameAlreadyExists.style.display = 'block';
+            } else if (status === 409 && mensagem === "This email already exist") {
+                thisEmailAlreadyExists.style.display = 'block';
+            } else {
+                setTimeout(() => {
+                  window.location.href = './signIn.html'
+                }, 600);  
+            }
+
+        } else if (passwordLength < 8) {
             e.preventDefault();
+            shortPassword.style.display = 'block';
         };
 
     });
 
-    form.addEventListener('submit', async function(a) {
-        const formData = new FormData(form)
-    });
-
-};
+});
 
 
 
@@ -107,5 +133,3 @@ function newLanguage() {
 
     };
 };
-
-</script>
