@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
+	"github.com/joho/godotenv"
 )
 
 
@@ -35,7 +38,7 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			http.Error(w, "ERROR: ", http.StatusBadRequest)
 			return
 		}
-
+		
 
 		name := r.FormValue("name")
 		email := r.FormValue("email")
@@ -50,7 +53,7 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			dataSlice = append(dataSlice, newUsers)
 			fmt.Printf("\nName: %v\nemail: %v\npassword: %v\n", newUsers.name, newUsers.email, newUsers.password)
 			fmt.Println(dataSlice)
-			// fmt.Printf("%v\n", len(dataSlice))
+	
 			nameData := newUsers.name
 			emailData := newUsers.email
 			passwordData := newUsers.password
@@ -63,16 +66,19 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			if verifyHelp {
 				
 				if nameDuplicate {
+					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This name already exist")
 					return
 				} else if emailDuplicate {
+					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This email already exist"))
 					return
 				}
 							
 			} else if !verifyHelp {
+				log.Println("Sending the status 201")
 				w.WriteHeader(201)
 				w.Write([]byte("User has been created")
 				return
