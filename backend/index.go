@@ -46,11 +46,9 @@ func handler(w http.ResponseWriter, r * http.Request) {
 		passwordString := strconv.Itoa(password)
 
 		newUsers := Data{name: name, email: email, password: password}
-		dataSlice = append(dataSlice, newUsers)
-
+		
 		if newUsers.name != "" && newUsers.email != "" && newUsers.password != "" {
 			
-			dataSlice = append(dataSlice, newUsers)
 			fmt.Printf("\nName: %v\nemail: %v\npassword: %v\n", newUsers.name, newUsers.email, newUsers.password)
 			fmt.Println(dataSlice)
 	
@@ -60,28 +58,36 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			database(nameData, emailData, passwordData)
 
 			fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
+			fmt.Println("EMAIL DUPLICATE ON HANDLER FUNC: ", emailDuplicate)
 			fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
 
 
 			if verifyHelp {
 				
 				if nameDuplicate {
+					
 					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This name already exist")
 					return
+							
 				} else if emailDuplicate {
+					
 					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This email already exist"))
 					return
+					
 				}
 							
 			} else if !verifyHelp {
+				
+				dataSlice = append(dataSlice, newUsers)
 				log.Println("Sending the status 201")
 				w.WriteHeader(201)
 				w.Write([]byte("User has been created")
 				return
+						
 			}
 
 		} else {
@@ -141,15 +147,15 @@ func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string
 					fmt.Printf("LAST EMAIL ALREADY EXISTS: %s\n", emailData)
 					emailDuplicate = true
 
-				} // IF STRING CONTAINS "FOR KEY 'UNIQUE_NAME"
+				}
 			} else {
 
 				verifyHelp = false
 				nameDuplicate = false
 				emailDuplicate = false
 
-			}// IF STRINGS.CONTAINS "ERROR 1062"
-		} // IF ERRO INSERT != NIL
+			}
+		}
 	} else {
 		fmt.Println("OS VALORES ESTÃO VAZIOS , PRINT DA FUNÇÃO SQL INSERT\n")
 	}
