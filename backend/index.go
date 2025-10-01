@@ -55,20 +55,24 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			nameData := newUsers.name
 			emailData := newUsers.email
 			passwordData := newUsers.password
+			
 			database(nameData, emailData, passwordData)
-
+			dataSlice = append(dataSlice, newUsers)
+			
 			fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
 			fmt.Println("EMAIL DUPLICATE ON HANDLER FUNC: ", emailDuplicate)
 			fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
 
 
 			if verifyHelp {
+				verifyHelp = false
 				
 				if nameDuplicate {
 					
 					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This name already exist")
+					nameDuplicate = false
 					return
 							
 				} else if emailDuplicate {
@@ -76,13 +80,13 @@ func handler(w http.ResponseWriter, r * http.Request) {
 					log.Println("Sending the status 409")
 					w.WriteHeader(409)
 					w.Write([]byte("This email already exist"))
+					emailDuplicate = false
 					return
 					
 				}
 							
 			} else if !verifyHelp {
 				
-				dataSlice = append(dataSlice, newUsers)
 				log.Println("Sending the status 201")
 				w.WriteHeader(201)
 				w.Write([]byte("User has been created")
