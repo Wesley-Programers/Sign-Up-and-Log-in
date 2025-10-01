@@ -96,7 +96,11 @@ function newLanguage() {
     
     let languagesOption = document.getElementById('languages');
     let languages = languagesOption.value;
-
+    
+    let emailNotValid = document.getElementById('emailIncorrect');
+    let shortPassword = document.getElementById('shortPassword');
+    let nameAlreadyExits = document.getElementById('nameAlreadyExits');
+    let emailAlreadyExits = document.getElementById('emailAlreadyExits');
     let englishLanguage = document.getElementById('englishLanguage');
     let portugueseLanguage = document.getElementById('portugueseLanguage');
     let welcome = document.getElementById('welcome');
