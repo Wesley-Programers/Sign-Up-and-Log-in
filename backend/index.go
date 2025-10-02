@@ -10,13 +10,14 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
+	"golang.org/x/crypto/bcrypt"
 )
 
 
 type Data struct {
 	name string
 	email string
-	password int
+	password string
 }
 
 var dataSlice []Data
@@ -43,9 +44,13 @@ func handler(w http.ResponseWriter, r * http.Request) {
 		name := r.FormValue("name")
 		email := r.FormValue("email")
 		password := r.FormValue("password")
-		passwordString := strconv.Itoa(password)
+		hash, err := hashPassword(password)
+		
+		if err != nil {
+			panic(err)
+		}
 
-		newUsers := Data{name: name, email: email, password: password}
+		newUsers := Data{name: name, email: email, password: hash}
 		
 		if newUsers.name != "" && newUsers.email != "" && newUsers.password != "" {
 			
@@ -165,6 +170,11 @@ func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string
 	}
 
 	return nil
+}
+
+func hashPassword(password string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(bytes), err
 }
 
 func main() {
