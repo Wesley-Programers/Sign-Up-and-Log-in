@@ -122,6 +122,10 @@ function newLanguage() {
         name.placeholder = 'Nome';
         email.placeholder = 'Email';
         password.placeholder = 'Senha';
+        nameAlreadyExits.innerHTML = 'Esse nome já está em uso';
+        emailAlreadyExits.innerHTML = 'Esse email já esta em uso';
+        shortPassword.innerHTML = 'Sua senha é muito fraca';
+        emailNotValid.innerHTML = 'Esse email não é valido';
 
     } else if (languages === "english") {
 
@@ -134,6 +138,10 @@ function newLanguage() {
         name.placeholder = 'Name';
         email.placeholder = 'Email';
         password.placeholder = 'Password';
+        nameAlreadyExits.innerHTML = 'This name already exists';
+        emailAlreadyExits.innerHTML = 'This email already exists';
+        shortPassword.innerHTML = 'Your password is so weak';
+        emailNotValid.innerHTML = 'Enter a valid email adress';
 
     };
 };
