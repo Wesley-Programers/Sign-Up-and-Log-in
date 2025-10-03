@@ -20,6 +20,11 @@ type Data struct {
 	password string
 }
 
+type DataLog struct {
+	nameOrEmail string
+	password string
+}
+
 var dataSlice []Data
 
 func handler(w http.ResponseWriter, r * http.Request) {
@@ -109,6 +114,10 @@ func handler(w http.ResponseWriter, r * http.Request) {
 			
 }
 
+func verifyLogIn(w http.ResponseWriter, r * http.Request) {
+	
+}
+
 func database(nameTest, emailTest, passwordTest string) {
 
 }
@@ -178,6 +187,6 @@ func hashPassword(password string) (string, error) {
 }
 
 func main() {
-	http.HandleFunc("/", handler)	
+	http.HandleFunc("/", handler)
 	fmt.Println("SERVER OPEN WITH GOLANG")
 }
