@@ -116,6 +116,33 @@ func handler(w http.ResponseWriter, r * http.Request) {
 
 func verifyLogIn(w http.ResponseWriter, r * http.Request) {
 	
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Content-Type", "text/plain")
+
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+
+		err := r.ParseForm()
+		if err != nil {
+			http.Error(w, "ERROR: ", http.StatusBadRequest)
+			return
+		}
+
+		nameOrEmail := r.FormValue("nameEmail")
+		passwordLog := r.FormValue("passwordLog")
+
+		fmt.Println(nameOrEmail)
+		fmt.Println(passwordLog)
+
+	} else {
+		http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
+	}
+	
 }
 
 func database(nameTest, emailTest, passwordTest string) {
@@ -185,6 +212,21 @@ func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
+
+func verifyLogin(database *sql.DB, nameLogin string) {
+	query := "SELECT * FROM usuarios WHERE name = ?";
+
+	var yesLogin string
+	err := database.QueryRow(query, nameLogin).Scan(&yesLogin)
+	if err == sql.ErrNoRows {
+		fmt.Println("NOME NAO EXISTE")
+	} else if err != nil {
+		panic(err)
+	} else {
+		fmt.Println("NOME EXISTE SIM")
+	}
+	
+}						
 
 func main() {
 	http.HandleFunc("/", handler)
