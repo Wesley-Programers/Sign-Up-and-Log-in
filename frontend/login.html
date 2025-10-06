@@ -1,1 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
 
+        #forgotPassword, #dontHaveAccount {
+            cursor: pointer;
+        };
+    </style>
+</head>
+<body>
+
+    <div>
+        <p id="welcomeBack">WELCOME BACK</p>
+        <p id="signInTitle">LOG IN</p>
+        <p id="forgotPassword" onclick="forgotPassword()">Forgot the password?</p>
+        <p id="dontHaveAccount" onclick="createAccount()">Don't have an account?</p>
+        
+
+        <form id="data-sign-in" action="http://127.0.0.1:8000/log" method="post">
+            <div id="div-sign-in">
+                <!-- <p id="nameEmail">Name or Email</p> -->
+                <input type="text" id="inputNameEmail" required name="nameEmail" placeholder="Name or Email">
+                <input type="text" id="inputPassword" required name="passwordLog" placeholder="Password">
+                <!-- <p id="password">Password</p> -->
+
+                <button id="signInButton" type="submit">Log in</button>
+            </div>
+        </form>
+
+        <select name="languages" id="languages" onchange="newLanguage()">
+            <option value="portuguese" id="portugueseLanguage">Portuguese</option>
+            <option value="english" selected id="englishLanguage">English</option>
+        </select>
+
+
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+        });
+
+        function createAccount() {
+            setTimeout(() => {
+                location.href = './index.html';
+            }, 250)
+        };
+
+        function newLanguage() {
+
+            let languages = document.getElementById('languages');
+            let language = languages.value;
+
+            let button = document.getElementById('signInButton');
+            let portugueseLanguage = document.getElementById('portugueseLanguage');
+            let englishLanguage = document.getElementById('englishLanguage');
+            let welcomeBack = document.getElementById('welcomeBack');
+            let title = document.getElementById('signInTitle');
+            let dontHaveAccount = document.getElementById('dontHaveAccount');
+            let forgotPassword = document.getElementById('forgotPassword');
+            let inputNameEmail = document.getElementById('inputNameEmail');
+            let passwordInput = document.getElementById('inputPassword');
+
+
+            if (language === "portuguese") {
+
+                button.innerHTML = 'Entrar';
+                portugueseLanguage.innerHTML = 'Português';
+                englishLanguage.innerHTML = 'Inglês';
+                welcomeBack.innerHTML = 'BEM VINDO DE VOLTA';
+                title.innerHTML = 'LOGIN';
+                forgotPassword.innerHTML = 'Esqueceu a senha?';
+                inputNameEmail.placeholder = 'Nome ou Email';
+                passwordInput.placeholder = 'Senha';
+                dontHaveAccount.innerHTML = 'Não tem uma conta?';
+
+            } else if (language === "english") {
+
+                button.innerHTML = 'Log in';
+                portugueseLanguage.innerHTML = 'Portuguese';
+                englishLanguage.innerHTML = 'English';
+                welcomeBack.innerHTML = 'WELCOME BACK';
+                title.innerHTML = 'LOG IN';
+                forgotPassword.innerHTML = 'Forgot the password?';
+                inputNameEmail.placeholder = 'Name or Email';
+                passwordInput.placeholder = 'Password';
+                dontHaveAccount.innerHTML = "Don't have an account?"
+
+            };
+
+        };
+
+    </script>
+    
+</body>
+</html>
