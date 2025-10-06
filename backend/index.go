@@ -213,22 +213,26 @@ func hashPassword(password string) (string, error) {
 	return string(bytes), err
 }
 
-func verifyLogin(database *sql.DB, nameLogin string) {
+func verifyLogin(database *sql.DB, nameLogin string) error {
+	
 	query := "SELECT * FROM usuarios WHERE name = ?";
 
 	var yesLogin string
 	err := database.QueryRow(query, nameLogin).Scan(&yesLogin)
 	if err == sql.ErrNoRows {
-		fmt.Println("NOME NAO EXISTE")
+		fmt.Println("NOME NAO EXISTE: LINHA 282")
+		return false
 	} else if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("NOME EXISTE SIM")
+		log.Fatal("ERROR NA LINHA 285: ", err)
 	}
+	
+	fmt.Println("NOME EXISTE SIM")
+	return true
 	
 }						
 
 func main() {
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/", handlerLogIn)
 	fmt.Println("SERVER OPEN WITH GOLANG")
 }
