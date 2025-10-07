@@ -20,154 +20,172 @@ type Data struct {
 	password string
 }
 
-type DataLog struct {
-	nameOrEmail string
-	password string
-}
-
 var dataSlice []Data
 
-func handler(w http.ResponseWriter, r * http.Request) {
+var verifyHelp bool = false
+var nameDuplicate bool = false
+var emailDuplicate bool = false
 
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "text/plain")
+func handler(database *sql.DB) http.HandlerFunc {
 
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-	
-	if r.Method == http.MethodPost {
+	return func(w http.ResponseWriter, r *http.Request) {
 
-		err := r.ParseMultipartForm(10 << 20)
-		if err != nil {
-			http.Error(w, "ERROR: ", http.StatusBadRequest)
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "text/plain")
+
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
-		
 
-		name := r.FormValue("name")
-		email := r.FormValue("email")
-		password := r.FormValue("password")
-		hash, err := hashPassword(password)
-		
-		if err != nil {
-			panic(err)
-		}
+		if r.Method == http.MethodPost {		
 
-		newUsers := Data{name: name, email: email, password: hash}
-		
-		if newUsers.name != "" && newUsers.email != "" && newUsers.password != "" {
-			
-			fmt.Printf("\nName: %v\nemail: %v\npassword: %v\n", newUsers.name, newUsers.email, newUsers.password)
-			fmt.Println(dataSlice)
-	
-			nameData := newUsers.name
-			emailData := newUsers.email
-			passwordData := newUsers.password
-			
-			database(nameData, emailData, passwordData)
-			dataSlice = append(dataSlice, newUsers)
-			
-			fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
-			fmt.Println("EMAIL DUPLICATE ON HANDLER FUNC: ", emailDuplicate)
-			fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
-
-
-			if verifyHelp {
-				verifyHelp = false
-				
-				if nameDuplicate {
-					
-					log.Println("Sending the status 409")
-					w.WriteHeader(409)
-					w.Write([]byte("This name already exist")
-					nameDuplicate = false
-					return
-							
-				} else if emailDuplicate {
-					
-					log.Println("Sending the status 409")
-					w.WriteHeader(409)
-					w.Write([]byte("This email already exist"))
-					emailDuplicate = false
-					return
-					
-				}
-							
-			} else if !verifyHelp {
-				
-				log.Println("Sending the status 201")
-				w.WriteHeader(201)
-				w.Write([]byte("User has been created")
+			err := r.ParseMultipartForm(10 << 20)
+			if err != nil {
+				http.Error(w, "ERROR: ", http.StatusBadRequest)
 				return
-						
 			}
 
+
+			name := r.FormValue("name")
+			email := r.FormValue("email")
+			password := r.FormValue("password")
+			hash, err := hashPassword(password)
+			
+			if err != nil {
+				log.Fatal("ERROR ON HASH: ", err)
+			}
+			// passwordString := strconv.Itoa(password)
+			
+			newUsers := Data{name: name, email: email, password: hash}
+			
+			if newUsers.name != "" && newUsers.email != "" && newUsers.password != "" {
+				
+				fmt.Printf("\nName: %v\nemail: %v\npassword: %v\n", newUsers.name, newUsers.email, newUsers.password)
+				fmt.Println(dataSlice)
+
+				nameData := newUsers.name
+				emailData := newUsers.email
+				passwordData := newUsers.password
+
+				errInsert := sqlInsert(database, nameData, emailData, passwordData)
+				if errInsert != nil {
+					http.Error(w, "Some error", http.StatusInternalServerError)
+					return
+				}
+				
+				dataSlice = append(dataSlice, newUsers)
+
+				fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
+				fmt.Println("EMAIL DUPLICATE ON HANDLER FUNC: ", emailDuplicate)
+				fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
+
+
+				if verifyHelp {
+					verifyHelp = false
+					
+					if nameDuplicate {
+						log.Println("Mandando o codigo 409 No nameDuplicate")
+						w.WriteHeader(409)
+						w.Write([]byte("Nome já existe"))
+						nameDuplicate = false
+						return
+						
+					} else if emailDuplicate {
+						log.Println("Mandando o codigo 409 No emailDuplicate")
+						w.WriteHeader(409)
+						w.Write([]byte("Email já existe"))
+						emailDuplicate = false
+						return
+					}
+					
+				} else {
+					
+					log.Println("Mandando o codigo 201")
+					w.WriteHeader(201)
+					w.Write([]byte("Dados validos"))
+					return
+
+				}
+
+			} else {
+				// w.WriteHeader(http.StatusOK)
+				fmt.Println("\nVALORES VAZIOS NO HANDLER")
+			}
+		
+			
 		} else {
-			fmt.Println("\nVALORES VAZIOS NO HANDLER")
+			http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)	
 		}
 
-	} else {
-		http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)	
 	}
-			
+
 }
 
-func verifyLogIn(w http.ResponseWriter, r * http.Request) {
-	
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Content-Type", "text/plain")
+
+func handlerLogIn(database *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Content-Type", "text/plain")
 
 
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if r.Method == http.MethodPost {
-
-		err := r.ParseForm()
-		if err != nil {
-			http.Error(w, "ERROR: ", http.StatusBadRequest)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
 			return
 		}
 
-		nameOrEmail := r.FormValue("nameEmail")
-		passwordLog := r.FormValue("passwordLog")
+		if r.Method == http.MethodPost {
 
-		fmt.Println(nameOrEmail)
-		fmt.Println(passwordLog)
+			err := r.ParseForm()
+			if err != nil {
+				http.Error(w, "ERROR: ", http.StatusBadRequest)
+				return
+			}
 
-	} else {
-		http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
+			nameOrEmail := r.FormValue("nameEmail")
+			// passwordLog := r.FormValue("passwordLog")
+			fmt.Println(nameOrEmail)
+			if verifyLogin(database, nameOrEmail) {
+				fmt.Println("SIM, LOGIN FEITO")
+			} else {
+				fmt.Println("NAO, LOGIN NAO FEITO")
+			}
+			
+		} else {
+			http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
+		}
+
 	}
+}
+
+func database() *sql.DB {
 	
 }
 
-func database(nameTest, emailTest, passwordTest string) {
-
-}
 
 func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
 
 	if db == nil {
-		log.Fatal("ERROR ON SQL TABLE") 
+		log.Fatal("ERROR ON SQL TABLE WHERE *SQL.DB == NIL") 
 	}
+
 	_, err := db.Exec(`
 	CREATE TABLE IF NOT EXISTS usuarios (
 		id INT AUTO_INCREMENT PRIMARY KEY,
-		name VARCHAR(100),
-		email VARCHAR(100),
-		password VARCHAR(1000),
+		name VARCHAR(80),
+		email VARCHAR(80),
+		password VARCHAR(100),
 		created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`)
 
 	if err != nil {
 		log.Fatal("ERROR TRYING TO CREATE THE TABLE ", err)
 	}
-	
+
 }
+
 
 func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string) error {
 
@@ -202,37 +220,42 @@ func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string
 			}
 		}
 	} else {
-		fmt.Println("OS VALORES ESTÃO VAZIOS , PRINT DA FUNÇÃO SQL INSERT\n")
+		fmt.Println("OS VALORES ESTÃO VAZIOS , PRINT DA FUNÇÃO SQL INSERT")
 	}
 
 	return nil
 }
+
 
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
-func verifyLogin(database *sql.DB, nameLogin string) error {
-	
-	query := "SELECT * FROM usuarios WHERE name = ?";
+
+func verifyLogin(database *sql.DB, nameLogin string) bool {
+	query := "SELECT name FROM usuarios WHERE name = ?";
 
 	var yesLogin string
 	err := database.QueryRow(query, nameLogin).Scan(&yesLogin)
 	if err == sql.ErrNoRows {
-		fmt.Println("NOME NAO EXISTE: LINHA 282")
+		fmt.Println("NOME NAO EXISTE")
 		return false
 	} else if err != nil {
-		log.Fatal("ERROR NA LINHA 285: ", err)
+		log.Fatal("ERROR NA FUNÇÃO VERIFY LOGIN: ", err)
 	}
 	
 	fmt.Println("NOME EXISTE SIM")
 	return true
-	
-}						
+}
+
 
 func main() {
-	http.HandleFunc("/", handler)
-	http.HandleFunc("/", handlerLogIn)
+	database := database()
+	defer database.Close()
+
+	http.HandleFunc("/sign", handler(db))
+	http.HandleFunc("/login", handlerLogIn(db))
+	
 	fmt.Println("SERVER OPEN WITH GOLANG")
 }
