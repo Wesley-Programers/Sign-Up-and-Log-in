@@ -145,9 +145,9 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 			}
 
 			nameOrEmail := r.FormValue("nameEmail")
-			// passwordLog := r.FormValue("passwordLog")
+			passwordLog := r.FormValue("passwordLog")
 			fmt.Println(nameOrEmail)
-			if verifyLogin(database, nameOrEmail) {
+			if verifyLogin(database, nameOrEmail, passwordLog) {
 				fmt.Println("SIM, LOGIN FEITO")
 			} else {
 				fmt.Println("NAO, LOGIN NAO FEITO")
@@ -233,19 +233,27 @@ func hashPassword(password string) (string, error) {
 }
 
 
-func verifyLogin(database *sql.DB, nameLogin string) bool {
-	query := "SELECT name FROM usuarios WHERE name = ?";
+func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
+	query := "SELECT password FROM usuarios WHERE name = ?";
 
-	var yesLogin string
-	err := database.QueryRow(query, nameLogin).Scan(&yesLogin)
+	var passwordHash string
+	err := database.QueryRow(query, nameLogin).Scan(&passwordHash)
 	if err == sql.ErrNoRows {
-		fmt.Println("NOME NAO EXISTE")
+		fmt.Println("\nNOME NAO EXISTE")
 		return false
 	} else if err != nil {
 		log.Fatal("ERROR NA FUNÇÃO VERIFY LOGIN: ", err)
+		return false
+	}
+
+	errPasswordHash := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordLogin))
+
+	if errPasswordHash != nil {
+		fmt.Println("SENHA INVALIDA")
+		return false
 	}
 	
-	fmt.Println("NOME EXISTE SIM")
+	fmt.Println("NOME E TALVEZ A SENHA EXISTE SIM")
 	return true
 }
 
@@ -254,8 +262,8 @@ func main() {
 	database := database()
 	defer database.Close()
 
-	http.HandleFunc("/sign", handler(db))
-	http.HandleFunc("/login", handlerLogIn(db))
+	http.HandleFunc("/sign", handler(database))
+	http.HandleFunc("/login", handlerLogIn(database))
 	
 	fmt.Println("SERVER OPEN WITH GOLANG")
 }
