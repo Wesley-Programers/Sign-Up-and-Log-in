@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"errors"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -21,10 +22,6 @@ type Data struct {
 }
 
 var dataSlice []Data
-
-var verifyHelp bool = false
-var nameDuplicate bool = false
-var emailDuplicate bool = false
 
 func handler(database *sql.DB) http.HandlerFunc {
 
@@ -56,7 +53,6 @@ func handler(database *sql.DB) http.HandlerFunc {
 			if err != nil {
 				log.Fatal("ERROR ON HASH: ", err)
 			}
-			// passwordString := strconv.Itoa(password)
 			
 			newUsers := Data{name: name, email: email, password: hash}
 			
@@ -70,48 +66,34 @@ func handler(database *sql.DB) http.HandlerFunc {
 				passwordData := newUsers.password
 
 				errInsert := sqlInsert(database, nameData, emailData, passwordData)
-				if errInsert != nil {
-					http.Error(w, "Some error", http.StatusInternalServerError)
-					return
-				}
-				
-				dataSlice = append(dataSlice, newUsers)
 
-				fmt.Println("NAME DUPLICATE ON HANDLER FUNC: ", nameDuplicate)
-				fmt.Println("EMAIL DUPLICATE ON HANDLER FUNC: ", emailDuplicate)
-				fmt.Println("VERIFY HELP ON HANDLER FUNC: ", verifyHelp)
-
-
-				if verifyHelp {
-					verifyHelp = false
-					
-					if nameDuplicate {
-						log.Println("Mandando o codigo 409 No nameDuplicate")
-						w.WriteHeader(409)
-						w.Write([]byte("Nome já existe"))
-						nameDuplicate = false
-						return
-						
-					} else if emailDuplicate {
-						log.Println("Mandando o codigo 409 No emailDuplicate")
-						w.WriteHeader(409)
-						w.Write([]byte("Email já existe"))
-						emailDuplicate = false
-						return
-					}
-					
-				} else {
-					
-					log.Println("Mandando o codigo 201")
+				if errInsert.Error() == "dados validos" {
+					dataSlice = append(dataSlice, newUsers)
+					log.Println("")
 					w.WriteHeader(201)
-					w.Write([]byte("Dados validos"))
-					return
+					w.Write([]byte(""))
+					dataSlice = append(dataSlice, newUsers)
 
+				} else if errInsert.Error() == "nome ja existe" {
+					log.Println("")
+					w.WriteHeader(409)
+					w.Write([]byte(""))
+
+				} else if errInsert.Error() == "email ja existe" {
+					log.Println("")
+					w.WriteHeader(409)
+					w.Write([]byte(""))
+
+				} else if errInsert != nil {
+					http.Error(w, "Some error", http.StatusInternalServerError)
+
+				} else {
+					log.Println("")
 				}
 
 			} else {
 				// w.WriteHeader(http.StatusOK)
-				fmt.Println("\nVALORES VAZIOS NO HANDLER")
+				fmt.Println("")
 			}
 		
 			
@@ -148,9 +130,9 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 			passwordLog := r.FormValue("passwordLog")
 			fmt.Println(nameOrEmail)
 			if verifyLogin(database, nameOrEmail, passwordLog) {
-				fmt.Println("SIM, LOGIN FEITO")
+				fmt.Println("")
 			} else {
-				fmt.Println("NAO, LOGIN NAO FEITO")
+				fmt.Println("")
 			}
 			
 		} else {
@@ -168,7 +150,7 @@ func database() *sql.DB {
 func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
 
 	if db == nil {
-		log.Fatal("ERROR ON SQL TABLE WHERE *SQL.DB == NIL") 
+		log.Fatal("") 
 	}
 
 	_, err := db.Exec(`
@@ -181,7 +163,7 @@ func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
 	);`)
 
 	if err != nil {
-		log.Fatal("ERROR TRYING TO CREATE THE TABLE ", err)
+		log.Fatal("", err)
 	}
 
 }
@@ -199,28 +181,23 @@ func sqlInsert(databasePointer *sql.DB, nameData, emailData, passwordData string
 
 			if strings.Contains(erroInsert.Error(), "Error 1062") {
 
-				verifyHelp = true
 				if strings.Contains(erroInsert.Error(), "for key 'unique_name'") {
 
 					fmt.Printf("LAST NAME ALREADY EXISTS: %s\n", nameData)
-					nameDuplicate = true
+					return errors.New("")
 
 				} else if strings.Contains(erroInsert.Error(), "for key 'unique_email'") {
 
 					fmt.Printf("LAST EMAIL ALREADY EXISTS: %s\n", emailData)
-					emailDuplicate = true
+					return errors.New("")
 
 				}
 			} else {
-
-				verifyHelp = false
-				nameDuplicate = false
-				emailDuplicate = false
-
+				return errors.New("")
 			}
 		}
 	} else {
-		fmt.Println("OS VALORES ESTÃO VAZIOS , PRINT DA FUNÇÃO SQL INSERT")
+		fmt.Println("")
 	}
 
 	return nil
@@ -239,21 +216,21 @@ func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
 	var passwordHash string
 	err := database.QueryRow(query, nameLogin).Scan(&passwordHash)
 	if err == sql.ErrNoRows {
-		fmt.Println("\nNOME NAO EXISTE")
+		fmt.Println("")
 		return false
 	} else if err != nil {
-		log.Fatal("ERROR NA FUNÇÃO VERIFY LOGIN: ", err)
+		log.Fatal("", err)
 		return false
 	}
 
 	errPasswordHash := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordLogin))
 
 	if errPasswordHash != nil {
-		fmt.Println("SENHA INVALIDA")
+		fmt.Println("")
 		return false
 	}
 	
-	fmt.Println("NOME E TALVEZ A SENHA EXISTE SIM")
+	fmt.Println("")
 	return true
 }
 
