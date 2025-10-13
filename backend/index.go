@@ -211,27 +211,31 @@ func hashPassword(password string) (string, error) {
 
 
 func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
-	query := "SELECT password FROM usuarios WHERE name = ?";
+	query := "SELECT password FROM usuarios WHERE name = ? OR email = ?";
 
 	var passwordHash string
-	err := database.QueryRow(query, nameLogin).Scan(&passwordHash)
+	err := database.QueryRow(query, nameLogin, emailLogin).Scan(&passwordHash)
+	
 	if err == sql.ErrNoRows {
-		fmt.Println("")
-		return false
+		if strings.HasSuffix(nameLogin, "") || strings.HasSuffix(emailLogin, "") {
+			return errors.New("")
+		} else {
+			return errors.New("")
+		}
 	} else if err != nil {
-		log.Fatal("", err)
-		return false
+		log.Fatal("some error: ", err)
 	}
 
+	
 	errPasswordHash := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordLogin))
 
 	if errPasswordHash != nil {
-		fmt.Println("")
-		return false
+		return errors.New("")
+
 	}
 	
 	fmt.Println("")
-	return true
+	return nil
 }
 
 
