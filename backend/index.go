@@ -120,7 +120,7 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 
 		if r.Method == http.MethodPost {
 
-			err := r.ParseForm()
+			err := r.ParseMultipartForm(10 << 20)
 			if err != nil {
 				http.Error(w, "ERROR: ", http.StatusBadRequest)
 				return
@@ -128,22 +128,46 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 
 			nameOrEmail := r.FormValue("nameEmail")
 			passwordLog := r.FormValue("passwordLog")
-			fmt.Println(nameOrEmail)
-			if verifyLogin(database, nameOrEmail, passwordLog) {
+
+			err2 := verifyLogin(database, nameOrEmail, nameOrEmail, passwordLog)
+
+			if err2 == nil {
 				fmt.Println("")
+				log.Println("")
+				w.WriteHeader(200)
+				w.Write([]byte(""))
+
+			} else if err2.Error() == "nome nao existe" {
+				log.Println("")
+				w.WriteHeader(409)
+				w.Write([]byte(""))
+				fmt.Println("")
+
+			} else if err2.Error() == "senha nao existe" {
+				log.Println("")
+				w.WriteHeader(409)
+				w.Write([]byte(""))
+				fmt.Println("")
+
+			} else if err2.Error() == "email nao existe" {
+				log.Println("")
+				w.WriteHeader(409)
+				w.Write([]byte(""))
+				fmt.Println("")
+
 			} else {
-				fmt.Println("")
+				log.Println("Error inesperado")
 			}
 			
 		} else {
 			http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
 		}
-
 	}
 }
 
 func database() *sql.DB {
-	
+
+	return database
 }
 
 
