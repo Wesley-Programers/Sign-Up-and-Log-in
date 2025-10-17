@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        #setting, #account, #theme, #language, #security {
+            cursor: pointer;
+        }
+
+        #account {
+            position: absolute;
+            top: 19%;
+            display: none;
+        }
+
+        #theme {
+            position: absolute;
+            top: 23%;
+            display: none;
+        }
+
+        #language {
+            position: absolute;
+            top: 27%;
+            display: none;
+        }
+
+        #security {
+            position: absolute;
+            top: 31%;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main">
+        <p id="welcome">HELLO, HOW'S IT GOING?</p>
+        <span id="setting">Settings</span>
+    </div>
+
+    <div id="div-settings">
+        <span id="account">Account</span>
+        <span id="theme">Theme</span>
+        <span id="language">Language</span>
+        <span id="security">Security</span>
+    </div>
+
+    <div id="div-account"></div>
+    <div id="theme"></div>
+    <div id="div-security"></div>
+    
+    <script src="./Javascript/main.js"></script>
+</body>
+</html>
