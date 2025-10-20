@@ -37,6 +37,11 @@
             top: 31%;
             display: none;
         }
+
+        #lightTheme, #darkTheme, #dark, #light, #englishLanguage, #portugueseLanguage, #portuguese, #english {
+            display: none;
+        }
+        
     </style>
 </head>
 <body>
@@ -55,6 +60,18 @@
 
     <div id="div-account"></div>
     <div id="theme"></div>
+    
+    <div id="languageDiv">
+        <label for="englishLanguage">
+            <input type="radio" name="themes" id="englishLanguage" value="englishLanguage">
+            <span id="english">English</span>
+        </label>
+        <label for="portugueseLanguage">
+            <input type="radio" name="themes" id="portugueseLanguage" value="portugueseLanguage">
+            <span id="portuguese">Portuguese</span>
+        </label>
+    </div>
+    
     <div id="div-security"></div>
     
     <script src="./Javascript/main.js"></script>
