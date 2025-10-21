@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"errors"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -132,10 +133,21 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 			err2 := verifyLogin(database, nameOrEmail, nameOrEmail, passwordLog)
 
 			if err2 == nil {
+				
 				fmt.Println("")
 				log.Println("")
 				w.WriteHeader(200)
 				w.Write([]byte(""))
+				
+				cookie := &http.Cookie{
+					Name: "",
+					Value: nameOrEmail,
+					Path: "/",
+					HttpOnly: false,
+					Expires: time.Now().Add(1 * time.Hour),
+				}
+
+				http.SetCookie(w, cookie)
 
 			} else if err2.Error() == "nome nao existe" {
 				log.Println("")
