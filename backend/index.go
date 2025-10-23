@@ -269,9 +269,51 @@ func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
 		return errors.New("")
 
 	}
-	
 	fmt.Println("")
 	return nil
+}
+
+
+func generateToken(w http.ResponseWriter, r *http.Request) {
+	
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "text/plain")
+
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	email := r.FormValue("email")
+
+	expiration := time.Now().Add(3 * time.Hour)
+	claims := &Claims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiration),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	stringToken, err := token.SignedString(jwtKey)
+	if err != nil {
+		log.Println("ERROR: ", err)
+		http.Error(w, "", http.StatusInternalServerError)
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name: "token",
+		Value: stringToken,
+		Expires: expiration,
+		HttpOnly: true,
+		Secure: false,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	log.Println("")
 }
 
 
