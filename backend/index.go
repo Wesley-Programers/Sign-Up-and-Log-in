@@ -22,6 +22,13 @@ type Data struct {
 	password string
 }
 
+type Claims struct {
+	Email string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+var jwtKey = []byte("")
+
 var dataSlice []Data
 
 func handler(database *sql.DB) http.HandlerFunc {
