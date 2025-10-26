@@ -2,15 +2,17 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"errors"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -23,6 +25,7 @@ type Data struct {
 }
 
 type Claims struct {
+	Name string `json:"name"`
 	Email string `json:"email"`
 	jwt.RegisteredClaims
 }
@@ -30,6 +33,7 @@ type Claims struct {
 var jwtKey = []byte("")
 
 var dataSlice []Data
+
 
 func handler(database *sql.DB) http.HandlerFunc {
 
@@ -145,16 +149,6 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 				log.Println("")
 				w.WriteHeader(200)
 				w.Write([]byte(""))
-				
-				cookie := &http.Cookie{
-					Name: "",
-					Value: nameOrEmail,
-					Path: "/",
-					HttpOnly: false,
-					Expires: time.Now().Add(1 * time.Hour),
-				}
-
-				http.SetCookie(w, cookie)
 
 			} else if err2.Error() == "nome nao existe" {
 				log.Println("")
@@ -183,6 +177,7 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 		}
 	}
 }
+
 
 func database() *sql.DB {
 
@@ -293,17 +288,19 @@ func generateToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	name := r.FormValue("name")
 	email := r.FormValue("email")
 
-	expiration := time.Now().Add(3 * time.Hour)
+	expiration := time.Now().Add(1 * time.Hour)
 	claims := &Claims{
+		Name: name,
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expiration),
 		},
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodES256, claims)
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	stringToken, err := token.SignedString(jwtKey)
 	if err != nil {
 		log.Println("ERROR: ", err)
@@ -321,6 +318,43 @@ func generateToken(w http.ResponseWriter, r *http.Request) {
 	})
 
 	log.Println("")
+}
+
+
+func validToken(w http.ResponseWriter, r *http.Request) {
+	
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Content-Type", "text/plain")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	cookie, err := r.Cookie("token")
+	if err != nil {
+		http.Error(w, "", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := cookie.Value
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return jwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Token invalid or expired", http.StatusUnauthorized)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	response := map[string]string{
+		"name": claims.Name,
+		"email": claims.Email,
+	}
+	json.NewEncoder(w).Encode(response)
 }
 
 
