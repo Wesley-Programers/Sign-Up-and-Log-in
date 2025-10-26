@@ -9,9 +9,11 @@ window.addEventListener("DOMContentLoaded", async () => {
         }
 
         const data = await res.json();
-        console.log(data)
+        console.log(data);
+        console.log(data.name);
+        console.log(data.email);
 
     } catch (error) {
-        console.error("", error)
+        console.error("", error);
     }
-})
+});
