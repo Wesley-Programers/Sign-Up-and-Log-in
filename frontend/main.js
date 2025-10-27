@@ -1,3 +1,14 @@
+const themeOption = document.querySelectorAll('input[name="themes"]');
+themeOption.forEach(themeOption => {
+    themeOption.addEventListener("change", (event) => {
+        const theme = event.target.value;
+        console.log("Escolhido: ", theme);
+
+        localStorage.setItem("currentTheme", theme);
+    });
+});
+
+
 window.addEventListener("DOMContentLoaded", async () => {
     try {
         const res = await fetch("", {
