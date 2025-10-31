@@ -1,3 +1,13 @@
+document.querySelectorAll('input[name="languages"]').forEach((input) => {
+    input.addEventListener("change", (event) => {
+        const language = event.target.value;
+        console.log("Escolhido: ", language);
+
+        localStorage.setItem("currentLanguage", language);
+    });
+});
+
+
 document.querySelectorAll('input[name="themes"]').forEach((input) => {
     input.addEventListener("change", (event) => {
         const theme = event.target.value;
@@ -23,7 +33,16 @@ window.addEventListener("DOMContentLoaded", () => {
             currentTheme.checked = true;
         } else {
             body.classList.add("light");
-        }
+        };
+    };
+
+    if (getLanguage) {
+        const currentLanguage = document.querySelector(`input[name="languages"][value="${language}"]`);
+        if (currentLanguage) {
+            currentLanguage.checked = true;
+        } else {
+            // alert("a");
+        };
     };
 
 });
