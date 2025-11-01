@@ -1,7 +1,28 @@
+let settings = document.getElementById("setting");
+let welcome = document.getElementById("welcome");
+let account = document.getElementById("account");
+let theme = document.getElementById("theme");
+let security = document.getElementById("security");
+let language = document.getElementById("language");
+
+let darkTheme = document.getElementById("darkTheme");
+let lightTheme = document.getElementById("lightTheme");
+let dark = document.getElementById("dark");
+let light = document.getElementById("light");
+
+let portugueseLanguage = document.getElementById("portugueseLanguage");
+let englishLanguage = document.getElementById("englishLanguage");
+let portuguese = document.getElementById("portuguese");
+let english = document.getElementById("english");
+
+
 document.querySelectorAll('input[name="languages"]').forEach((input) => {
     input.addEventListener("change", (event) => {
         const language = event.target.value;
         console.log("Escolhido: ", language);
+
+        body.classList.remove("english", "portuguese");
+        body.classList.add(language);
 
         localStorage.setItem("currentLanguage", language);
     });
@@ -17,18 +38,22 @@ document.querySelectorAll('input[name="themes"]').forEach((input) => {
         body.classList.add(theme);
 
         localStorage.setItem("currentTheme", theme);
-    })
+    });
 });
 
 
 const getTheme = localStorage.getItem("currentTheme");
+const getLanguage = localStorage.getItem("currentLanguage");
 const body = document.body;
 
+
 window.addEventListener("DOMContentLoaded", () => {
+    
+    console.log("classes atuais: ", body.classList);
 
     if (getTheme) {
         body.classList.add(getTheme);
-        const currentTheme = document.querySelector(`input[name="theme"][value="${theme}"]`)
+        const currentTheme = document.querySelector(`input[name="theme"][value="${getTheme}"]`);
         if (currentTheme) {
             currentTheme.checked = true;
         } else {
@@ -37,12 +62,21 @@ window.addEventListener("DOMContentLoaded", () => {
     };
 
     if (getLanguage) {
-        const currentLanguage = document.querySelector(`input[name="languages"][value="${language}"]`);
+        body.classList.add(getLanguage);
+        const currentLanguage = document.querySelector(`input[name="languages"][value="${getLanguage}"]`);
         if (currentLanguage) {
             currentLanguage.checked = true;
         } else {
-            // alert("a");
+            body.classList.add("portuguese")
+            console.log("portugues adicionado");
         };
+    };
+
+    if (body.classList.contains("portuguese")) {
+        console.log("usuario prefere portugues");
+
+    } else if (body.classList.contains("english")) {
+        console.log("usuario prefere ingles");
     };
 
 });
@@ -56,16 +90,64 @@ window.addEventListener("DOMContentLoaded", async () => {
         })
 
         if (!res.ok) {
-            console.log("");
+            console.log("nao logado");
         }
 
         const data = await res.json();
         console.log(data);
         console.log(data.name);
         console.log(data.email);
-        welcome.innerHTML = ``
+        welcome.innerHTML = `HELLO, HOW'S IT GOING ${data.name}?`
 
     } catch (error) {
-        console.error("", error)
+        console.error("Erro ao carregar usuario: ", error)
     }
+})
+
+
+settings.addEventListener("click", () => {
+    settings.style.display = 'none';
+
+    welcome.style.display = 'none';
+    account.style.display = 'block';
+    theme.style.display = 'block';
+    language.style.display = 'block';
+    security.style.display = 'block';
+});
+
+
+theme.addEventListener("click", () => {
+    settings.style.display = 'none';
+
+    account.style.display = 'none';
+    theme.style.display = 'none';
+    language.style.display = 'none';
+    security.style.display = 'none';
+
+
+    dark.style.display = 'block';
+    light.style.display = 'block';
+    darkTheme.style.display = 'block';
+    lightTheme.style.display = 'block';
+});
+
+
+account.addEventListener("click", () => {
+    account.style.display = 'none';
+    theme.style.display = 'none';
+    language.style.display = 'none';
+    security.style.display = 'none';
+});
+
+language.addEventListener("click", () => {
+
+    account.style.display = 'none';
+    theme.style.display = 'none';
+    language.style.display = 'none';
+    security.style.display = 'none';
+
+    portuguese.style.display = 'block';
+    english.style.display = 'block';
+    portugueseLanguage.style.display = 'block';
+    englishLanguage.style.display = 'block';
 });
