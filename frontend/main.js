@@ -17,6 +17,7 @@ let english = document.getElementById("english");
 
 
 document.querySelectorAll('input[name="languages"]').forEach((input) => {
+    
     input.addEventListener("change", (event) => {
         const language = event.target.value;
         console.log("Escolhido: ", language);
@@ -25,11 +26,16 @@ document.querySelectorAll('input[name="languages"]').forEach((input) => {
         body.classList.add(language);
 
         localStorage.setItem("currentLanguage", language);
+        localStorage.setItem("currentLanguage", language);
+        setTimeout(() => {
+            window.location.href = window.location.href;
+        }, 300);
     });
 });
 
 
 document.querySelectorAll('input[name="themes"]').forEach((input) => {
+    
     input.addEventListener("change", (event) => {
         const theme = event.target.value;
         console.log("Escolhido: ", theme);
@@ -38,6 +44,10 @@ document.querySelectorAll('input[name="themes"]').forEach((input) => {
         body.classList.add(theme);
 
         localStorage.setItem("currentTheme", theme);
+        localStorage.setItem("currentLanguage", language);
+        setTimeout(() => {
+            window.location.href = window.location.href;
+        }, 300);
     });
 });
 
@@ -75,8 +85,29 @@ window.addEventListener("DOMContentLoaded", () => {
     if (body.classList.contains("portuguese")) {
         console.log("usuario prefere portugues");
 
+        settings.innerHTML = '';
+        welcome.innerHTML =  '';
+        account.innerHTML = '';
+        theme.innerHTML = '';
+        language.innerHTML = '';
+        security.innerHTML = '';
+        dark.innerHTML = '';
+        light.innerHTML = '';
+        english.innerHTML = '';
+        portuguese.innerHTML = '';
     } else if (body.classList.contains("english")) {
         console.log("usuario prefere ingles");
+
+        settings.innerHTML = '';
+        welcome.innerHTML =  '';
+        account.innerHTML = '';
+        theme.innerHTML = '';
+        language.innerHTML = '';
+        security.innerHTML = '';
+        dark.innerHTML = '';
+        light.innerHTML = '';
+        english.innerHTML = '';
+        portuguese.innerHTML = '';
     };
 
 });
