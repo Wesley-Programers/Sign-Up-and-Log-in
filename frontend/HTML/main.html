@@ -3,53 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account</title>
+    <title>Settings</title>
     <style>
         body {
-            background: black;
-            color: white;
-        }
-
-        #setting, #account, #theme, #language, #security {
-            cursor: pointer;
+            background: rgb(0, 0, 0);
+            color: rgb(255, 255, 255);
         }
 
         #account {
             position: absolute;
             top: 19%;
-            display: none;
+            cursor: pointer;
         }
 
         #theme {
             position: absolute;
             top: 23%;
-            display: none;
+            cursor: pointer;
         }
 
         #language {
             position: absolute;
             top: 27%;
-            display: none;
+            cursor: pointer;
         }
 
         #security {
             position: absolute;
             top: 31%;
-            display: none;
+            cursor: pointer;
         }
-
-        #lightTheme, #darkTheme, #dark, #light, #englishLanguage, #portugueseLanguage, #portuguese, #english {
-            display: none;
-        }
-        
     </style>
 </head>
 <body>
-
-    <div id="main">
-        <p id="welcome">HELLO, HOW'S IT GOING?</p>
-        <span id="setting">Settings</span>
-    </div>
 
     <div id="div-settings">
         <span id="account">Account</span>
@@ -58,48 +44,37 @@
         <span id="security">Security</span>
     </div>
 
-    <div id="div-account"></div>
-    <div id="theme"></div>
+    <script>
+        let theme = document.getElementById("theme");
+        let language = document.getElementById("language");
+        let security = document.getElementById("security");
+        let account = document.getElementById("account");
+
+        theme.addEventListener("click", () => {
+            setTimeout(() => {
+                window.location.href = '../HTML/theme.html'
+            }, 500);
+        });
+
+        language.addEventListener("click", () => {
+            setTimeout(() => {
+                window.location.href = '../HTML/language.html'
+            }, 500);
+        });
+
+        security.addEventListener("click", () => {
+            setTimeout(() => {
+                window.location.href = '../HTML/security.html'
+            }, 500);
+        });
+
+        account.addEventListener("click", () => {
+            setTimeout(() => {
+                window.location.href = '../HTML/account.html'
+            }, 500);
+        });
+
+    </script>
     
-    <div id="languageDiv">
-        <label for="englishLanguage">
-            <input type="radio" name="themes" id="englishLanguage" value="englishLanguage">
-            <span id="english">English</span>
-        </label>
-        <label for="portugueseLanguage">
-            <input type="radio" name="themes" id="portugueseLanguage" value="portugueseLanguage">
-            <span id="portuguese">Portuguese</span>
-        </label>
-    </div>
-    
-    <div id="div-security">
-        <div id="div-basic-information-security">
-            <span id="span-main-email"></span>
-            <span id="span-another-email"></span>
-        </div>
-        <div id="div-password-options">
-            <span id="span-change-password"></span>
-            <span id="span-last-change"></span>
-            <span id="span-verify-strong"></span>
-        </div>
-        <div id="div-verification">
-            <span id="span-verification-yes-or-no"></span>
-        </div>
-        <div id="div-privacity-data">
-            <span id="span-see-or-change-data"></span>
-        </div>
-        <div id="div-log-out-account">
-            <span id="span-erase-account"></span>
-            <span id="span-desativate-account"></span>
-        </div>
-        <div id="div-alerts-notifications-security">
-            <span id="span-alerts"></span>
-        </div>
-        <div id="div-log">
-            <span id="span-last-things"></span>
-        </div>
-    </div>
-    
-    <script src="./Javascript/main.js"></script>
 </body>
 </html>
