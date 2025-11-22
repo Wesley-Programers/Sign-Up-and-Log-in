@@ -3,78 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings</title>
+    <title>Account</title>
     <style>
         body {
-            background: rgb(0, 0, 0);
-            color: rgb(255, 255, 255);
+            background: black;
+            color: white;
         }
 
-        #account {
-            position: absolute;
-            top: 19%;
-            cursor: pointer;
-        }
-
-        #theme {
-            position: absolute;
-            top: 23%;
-            cursor: pointer;
-        }
-
-        #language {
-            position: absolute;
-            top: 27%;
-            cursor: pointer;
-        }
-
-        #security {
-            position: absolute;
-            top: 31%;
+        #setting {
             cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div id="div-settings">
-        <span id="account">Account</span>
-        <span id="theme">Theme</span>
-        <span id="language">Language</span>
-        <span id="security">Security</span>
+    
+    <div id="main">
+
+        <p id="welcome">HELLO, HOW'S IT GOING?</p>
+        <span id="setting">Settings</span>
+
     </div>
-
+    
+    
     <script>
-        let theme = document.getElementById("theme");
-        let language = document.getElementById("language");
-        let security = document.getElementById("security");
-        let account = document.getElementById("account");
+        let settings = document.getElementById("setting");
 
-        theme.addEventListener("click", () => {
+        settings.addEventListener("click", () => {
             setTimeout(() => {
-                window.location.href = '../HTML/theme.html'
-            }, 500);
-        });
-
-        language.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = '../HTML/language.html'
-            }, 500);
-        });
-
-        security.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = '../HTML/security.html'
-            }, 500);
-        });
-
-        account.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = '../HTML/account.html'
+                window.location.href = './settings.html'
             }, 500);
         });
 
     </script>
-    
 </body>
 </html>
