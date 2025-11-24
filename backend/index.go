@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"log"
@@ -33,6 +35,13 @@ type Claims struct {
 var jwtKey = []byte("")
 
 var dataSlice []Data
+
+
+func RandString(n int) string {
+	b := make([]byte, n)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
 
 
 func handler(database *sql.DB) http.HandlerFunc {
