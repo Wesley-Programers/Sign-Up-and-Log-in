@@ -3,7 +3,6 @@ package main
 import (
 	"crypto/rand"
 	"database/sql"
-	"encoding/json"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,11 +11,16 @@ import (
 	"os"
 	"strings"
 	"time"
+	
+	// "encoding/json"
+	// "strconv"
+	// "io"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/joho/godotenv"
 	"golang.org/x/crypto/bcrypt"
+
+	// "github.com/golang-jwt/jwt/v5"
 )
 
 
@@ -26,13 +30,10 @@ type Data struct {
 	password string
 }
 
-type Claims struct {
-	Name string `json:"name"`
-	Email string `json:"email"`
-	jwt.RegisteredClaims
+type Session struct {
+	UserID int
+	Expires time.Time
 }
-
-var jwtKey = []byte("")
 
 var dataSlice []Data
 
@@ -285,94 +286,13 @@ func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
 }
 
 
-func generateToken(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Content-Type", "text/plain")
-
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	name := r.FormValue("name")
-	email := r.FormValue("email")
-
-	expiration := time.Now().Add(1 * time.Hour)
-	claims := &Claims{
-		Name: name,
-		Email: email,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(expiration),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	stringToken, err := token.SignedString(jwtKey)
-	if err != nil {
-		log.Println("ERROR: ", err)
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
-
-	http.SetCookie(w, &http.Cookie{
-		Name: "token",
-		Value: stringToken,
-		Expires: expiration,
-		HttpOnly: true,
-		Secure: false,
-		SameSite: http.SameSiteStrictMode,
-	})
-
-	log.Println("")
-}
-
-
-func validToken(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Content-Type", "text/plain")
-
-	if r.Method == http.MethodOptions {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	cookie, err := r.Cookie("token")
-	if err != nil {
-		http.Error(w, "", http.StatusUnauthorized)
-		return
-	}
-
-	tokenString := cookie.Value
-	claims := &Claims{}
-	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
-	})
-
-	if err != nil || !token.Valid {
-		http.Error(w, "Token invalid or expired", http.StatusUnauthorized)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	response := map[string]string{
-		"name": claims.Name,
-		"email": claims.Email,
-	}
-	json.NewEncoder(w).Encode(response)
-}
-
-
 func main() {
 	database := database()
 	defer database.Close()
 
 	http.HandleFunc("/sign", handler(database))
 	http.HandleFunc("/login", handlerLogIn(database))
+	http.HandleFunc("/main", handlerRecoverCookie(database))
 	
 	fmt.Println("SERVER OPEN WITH GOLANG")
 }
