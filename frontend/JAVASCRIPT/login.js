@@ -11,11 +11,29 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const formData = new FormData(e.target)
 
-        fetch("/main")
-            .then(res => res.json())
-            .then(data => {
-                alert(data.email)
-            });
+        try {
+
+            fetch("", {
+                method: "GET",
+                credentials: "include",
+            })
+            .then(async res => {
+                if (!res.ok) {
+                    const text = await res.text();
+                    throw new Error("ERROR HTTP " + res.status + ": " + text)
+                }
+                return res.json();
+            })
+            .then(data => alert(data.email))
+            .catch(err => console.error(err));
+
+        } catch(error) {
+
+            console.error("", error);
+            alert("");
+
+        };
+
 
         try {
 
@@ -28,33 +46,33 @@ document.addEventListener("DOMContentLoaded", () => {
             const mensagem = await fetchLogin.text()
             alert(`Status: ${status} Mensagem: ${mensagem}`);
 
-            if (status === 200 && mensagem === "Dados de login validos") {
+            if (status === 200 && mensagem === "") {
 
-                console.log("Is everything alright");
+                console.log("");
 
                 incorrectName.style.display = 'none';
                 incorrectEmail.style.block = 'none';
                 incorrectPassword.style.display = 'none';
                 setTimeout(() => {
-                    window.location.href = '../HTML/mainAccount.html'
+                    window.location.href = ''
                 }, 500);
 
             } else {
                 e.preventDefault();
 
-                if (status === 409 && mensagem === "Nome incorreto") {
+                if (status === 409 && mensagem === "") {
                     console.log("nome incorreto");
                     incorrectName.style.display = 'block';
 
                     incorrectEmail.style.block = 'none';
                     incorrectPassword.style.display = 'none';
-                } else if (status === 409 && mensagem === "Senha incorreta") {
+                } else if (status === 409 && mensagem === "") {
                     console.log("senha incorreta");
                     incorrectPassword.style.display = 'block';
 
                     incorrectName.style.display = 'none';
                     incorrectEmail.style.display = 'none';
-                } else if (status === 409 && mensagem === "Email incorreto") {
+                } else if (status === 409 && mensagem === "") {
                     console.log("email incorreto");
                     incorrectEmail.style.display = 'block';
 
