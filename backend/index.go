@@ -131,7 +131,10 @@ func handler(database *sql.DB) http.HandlerFunc {
 func handlerLogIn(database *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Content-Type", "text/plain")
 
 
@@ -154,29 +157,63 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 			err2 := verifyLogin(database, nameOrEmail, nameOrEmail, passwordLog)
 
 			if err2 == nil {
-				
-				fmt.Println("")
-				log.Println("")
+				fmt.Println("\nSIM, LOGIN FEITO")
+				log.Println("MANDANDO O CODIGO 200 NO VERIFY LOGIN")
 				w.WriteHeader(200)
-				w.Write([]byte(""))
+				w.Write([]byte("Dados de login validos"))
+
+				sessionID := RandString(64)
+				var userID int
+
+				var passwordHashed string
+
+				anotherErr := database.QueryRow(
+				"SELECT id, password FROM usuarios WHERE email = ?", nameOrEmail).Scan(&userID, &passwordHashed)
+				if anotherErr != nil {
+					log.Fatalf("ERROR TRYIN' TO GET THE USER ID: %v", anotherErr)
+				}
+
+				errHash := bcrypt.CompareHashAndPassword([]byte(passwordHashed), []byte(passwordLog))
+				if errHash != nil {
+					fmt.Println("senha errada")
+					return
+				}
+
+				err := SaveSession(database, sessionID, userID, time.Now().Add(5 * time.Minute))
+				if err != nil {
+					http.Error(w, "ERROR", 500)
+					return
+				}
+
+				cookie := http.Cookie{
+					Name: "id_user",
+					Value: sessionID,
+					Path: "/",
+					HttpOnly: false,
+					Secure: false,
+					SameSite: http.SameSiteStrictMode,
+					Expires: time.Now().Add(5 * time.Minute),
+				}
+				
+				http.SetCookie(w, &cookie)
 
 			} else if err2.Error() == "nome nao existe" {
-				log.Println("")
+				log.Println("Mandando o codigo 409 no verify login nome nao existe")
 				w.WriteHeader(409)
-				w.Write([]byte(""))
-				fmt.Println("")
+				w.Write([]byte("Nome incorreto"))
+				fmt.Println("Nome nao existe")
 
 			} else if err2.Error() == "senha nao existe" {
-				log.Println("")
+				log.Println("Mandando o codigo 409 no verify login senha nao existe")
 				w.WriteHeader(409)
-				w.Write([]byte(""))
-				fmt.Println("")
+				w.Write([]byte("Senha incorreta"))
+				fmt.Println("Senha nao existe")
 
 			} else if err2.Error() == "email nao existe" {
-				log.Println("")
+				log.Println("Mandando o codigo 409 no verify login email nao existe")
 				w.WriteHeader(409)
-				w.Write([]byte(""))
-				fmt.Println("")
+				w.Write([]byte("Email incorreto"))
+				fmt.Println("Email nao existe")
 
 			} else {
 				log.Println("Error inesperado")
@@ -195,23 +232,23 @@ func database() *sql.DB {
 }
 
 
-func sqlTable(db *sql.DB, nameData, emailData, passwordData string) {
+func sqlTable(db *sql.DB) {
 
 	if db == nil {
-		log.Fatal("") 
+		log.Fatal("ERROR ON SQL TABLE") 
 	}
 
 	_, err := db.Exec(`
 	CREATE TABLE IF NOT EXISTS usuarios (
 		id INT AUTO_INCREMENT PRIMARY KEY,
 		name VARCHAR(80),
-		email VARCHAR(80),
+		email VARCHAR(80) UNIQUE,
 		password VARCHAR(100),
 		created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`)
 
 	if err != nil {
-		log.Fatal("", err)
+		log.Fatal("ERROR TRYING TO CREATE THE TABLE ", err)
 	}
 
 }
@@ -258,7 +295,7 @@ func hashPassword(password string) (string, error) {
 }
 
 
-func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
+func verifyLogin(database *sql.DB, nameLogin, emailLogin, passwordLogin string) (error) {
 	query := "SELECT password FROM usuarios WHERE name = ? OR email = ?";
 
 	var passwordHash string
@@ -278,9 +315,10 @@ func verifyLogin(database *sql.DB, nameLogin, passwordLogin string) bool {
 	errPasswordHash := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordLogin))
 
 	if errPasswordHash != nil {
+		fmt.Println("")
 		return errors.New("")
-
 	}
+	
 	fmt.Println("")
 	return nil
 }
