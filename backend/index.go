@@ -89,12 +89,35 @@ func handler(database *sql.DB) http.HandlerFunc {
 
 				errInsert := sqlInsert(database, nameData, emailData, passwordData)
 
-				if errInsert.Error() == "dados validos" {
+				if errInsert == nil {
+
+					session, _ := store.Get(r, "tokenSession")
+					session.Values["log"] = true
+					session.Values["userName"] = newUsers.name
+					session.Values["userEmail"] = newUsers.email
+					session.Save(r, w)
+
+					dataTest := fmt.Sprintf("%s|%s", newUsers.name,  newUsers.email)
+					dataBase64 := base64.StdEncoding.EncodeToString([]byte(dataTest))
+
+					cookie := &http.Cookie{
+						Name: "user_data",
+						Value: dataBase64,
+						Path: "/",
+						Expires: time.Now().Add(1 * time.Minute),
+						HttpOnly: false,
+						Secure: false,
+						// SameSite: http.SameSiteLaxMode,
+					}
+
+					http.SetCookie(w, cookie)
+					
 					dataSlice = append(dataSlice, newUsers)
-					log.Println("")
+					log.Println("Mandando o codigo 201")
 					w.WriteHeader(201)
-					w.Write([]byte(""))
+					w.Write([]byte("Dados validos"))
 					dataSlice = append(dataSlice, newUsers)
+
 
 				} else if errInsert.Error() == "nome ja existe" {
 					log.Println("")
