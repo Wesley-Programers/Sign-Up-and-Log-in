@@ -15,27 +15,82 @@
 
     <div id="div-security">
 
+        
         <div id="security-account">
+            <span id="main-name"></span>
             <span id="main-email"></span>
-            <span id=""></span>
+
+            <span id="change-name"></span>
+
+            <span id="change-email"></span>
+            <span id="another-email"></span>
+
+            <span id="email-button"></span>
         </div>
 
-        <div id="">
-            <span id=""></span>
-            <span id=""></span>
-            <span id=""></span>
+
+        <div id="security-access-and-login">
+            <span id="last-change-password"></span>
+            <span id="last-logins"></span>
+            <span id="change-password"></span>
+            <span id="authentication"></span>
         </div>
 
-        <div id=""></div>
 
-        <div id="">
+        <div id="security-logs">
+            <span id="logs"></span>
+        </div>
 
-            <span id=""></span>
-            <span id=""></span>
-            <span id=""></span>
+
+        <div id="log-out">
+
+            <span id="delete-account"></span>
+            <span id="alert-before-delete"></span>
+            <span id="deactivate-account"></span>
         </div>
         
+
     </div>
+
+    <script>
+        let mainEmail = document.getElementById("main-email");
+
+        const cookieGet = (name) => {
+            const test = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
+            if (test) return test[2];
+            return null;
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+
+            console.log("COOKIES: ", document.cookie);
+            console.log("oi");
+        
+            const cookieBase64 = cookieGet("user_data");
+            console.log("COOKIE ENCNTRADO: ", cookieBase64)
+
+            if (cookieBase64) {
+                try {
+                    const idk = atob(cookieBase64)
+                    const dataWithout = decodeURIComponent(escape(idk));
+                    const [name, email] = dataWithout.split("|");
+
+                    document.getElementById("main-name").innerHTML = name
+                    document.getElementById("main-email").innerText = email
+
+                    console.log("USER NAME: ", name);
+                    console.log("USER EMAIL: ", email);
+
+                } catch ( error ) {
+                    console.error("ERROR: ", error);
+                    alert("SOME ERROR");
+                };
+            } else {
+                console.log("NOTHING");
+            };
+
+        });
+    </script>
     
 </body>
 </html>
