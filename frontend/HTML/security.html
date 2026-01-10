@@ -9,6 +9,25 @@
             background: black;
             color: white;
         }
+
+        #change-email, #another-email, #change-name {
+            cursor: pointer;
+            display: none;
+        }
+
+        #change-email {
+            position: absolute;
+            top: 50%;
+        }
+
+        #div-change-email-window, #div-change-name-window {
+            border: 2px solid white;
+            display: none;
+        }
+
+        #saveNewName, #saveNewEmail {
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -17,15 +36,39 @@
 
         
         <div id="security-account">
-            <span id="main-name"></span>
-            <span id="main-email"></span>
+            <span id="main-name">MAIN NAME: </span>
+            <span id="main-email">MAIN EMAIL: </span>
 
-            <span id="change-name"></span>
+            <span id="change-name">CHANGE NAME</span>
+            <span id="change-email">CHANGE EMAIL</span>
 
-            <span id="change-email"></span>
-            <span id="another-email"></span>
+            <span id="another-email">ANOTHER EMAIL</span>
 
-            <span id="email-button"></span>
+            
+            <div id="div-change-name-window">
+                <span id="title">CHANGE NAME</span>
+
+                <input type="text" id="newName" name="name" placeholder="Name">
+                <span id="leave">LEAVE</span>
+                <span id="saveNewName">SAVE</span>
+            </div>
+
+            
+            <div id="div-change-email-window">
+                <span id="title">CHANGE EMAIL</span>
+
+                <form action="" method="post">
+
+                    <input type="text" id="currentEmail" name="currentEmail" placeholder="Your email">
+                    <input type="text" id="newEmail" name="newEmail" placeholder="New email">
+                    <input type="text" id="confirmNewEmal" name="confirmNewEmail" placeholder="Confirm the email">
+                    <input type="password" name="currentPassword" id="currentPassword" placeholder="Your password">
+
+                </form>
+
+                <span id="leave">LEAVE</span>
+                <span id="saveNewEmail">SAVE</span>
+            </div>
         </div>
 
 
@@ -47,6 +90,7 @@
             <span id="delete-account"></span>
             <span id="alert-before-delete"></span>
             <span id="deactivate-account"></span>
+
         </div>
         
 
@@ -54,6 +98,9 @@
 
     <script>
         let mainEmail = document.getElementById("main-email");
+        let changeEmail = document.getElementById("change-email");
+        let changeName = document.getElementById("change-name");
+        let change = document.getElementById("div-change-name-window")
 
         const cookieGet = (name) => {
             const test = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
@@ -61,18 +108,26 @@
             return null;
         }
 
+        changeName.addEventListener("click", () => {
+            change.style.display = "block";
+        });
+
+        changeEmail.addEventListener("click", () => {
+
+        });
+
         window.addEventListener("DOMContentLoaded", () => {
 
             console.log("COOKIES: ", document.cookie);
             console.log("oi");
         
-            const cookieBase64 = cookieGet("user_data");
+            const cookieBase64 = cookieGet("");
             console.log("COOKIE ENCNTRADO: ", cookieBase64)
 
             if (cookieBase64) {
                 try {
-                    const idk = atob(cookieBase64)
-                    const dataWithout = decodeURIComponent(escape(idk));
+                    const test = atob(cookieBase64)
+                    const dataWithout = decodeURIComponent(escape(test));
                     const [name, email] = dataWithout.split("|");
 
                     document.getElementById("main-name").innerHTML = name
