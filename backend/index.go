@@ -347,6 +347,81 @@ func verifyLogin(database *sql.DB, nameLogin, emailLogin, passwordLogin string) 
 }
 
 
+func handlerDeleteAccount(database *sql.DB) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		log.SetFlags(log.Lshortfile)
+
+		if r.Method == http.MethodPost {
+
+			err := r.ParseMultipartForm(10 << 20)
+			if err != nil {
+				http.Error(w, "ERROR: ", http.StatusBadRequest)
+				return
+			}
+			
+			query := "DELETE FROM usuarios WHERE password = ?"
+			queryEmailSelect := "SELECT password FROM usuarios WHERE email = ?"
+			queryPasswordSelect := "SELECT EXISTS(SELECT 1 FROM usuarios WHERE email = ?)"
+
+			var email bool
+			var passwordHash string
+
+			emailConfirm := r.FormValue("emailConfirm")
+			passwordConfirm := r.FormValue("passwordConfirm")
+
+			testErr := database.QueryRow(queryEmailSelect, emailConfirm).Scan(&passwordHash)
+			if testErr != nil {
+				log.Println("ERROR: ", testErr)
+			} else if testErr == sql.ErrNoRows {
+				fmt.Println("")
+				return
+			}
+
+			passwordHashCompare := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordConfirm))
+
+			errEmail := database.QueryRow(queryPasswordSelect, emailConfirm).Scan(&email)
+			if errEmail != nil {
+				log.Println("ERROR: ", errEmail)
+			}
+
+			if passwordHashCompare != nil {
+				fmt.Println("")
+
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(""))
+				
+			} else if passwordHashCompare == nil {
+				fmt.Println("")
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(""))
+				_, err := database.Exec(query, passwordHashCompare)
+
+				if err != nil {
+					log.Fatal("", err)
+				}
+
+			} else if !email {
+				fmt.Println("")
+
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(""))
+			}
+
+		} else {
+			http.Error(w, "ERROR: ", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+
 func main() {
 	database := database()
 	defer database.Close()
