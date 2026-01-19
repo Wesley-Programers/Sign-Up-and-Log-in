@@ -422,6 +422,56 @@ func handlerDeleteAccount(database *sql.DB) http.HandlerFunc {
 }
 
 
+func resetPassword(database *sql.DB) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		log.SetFlags(log.Lshortfile)
+
+		if r.Method == http.MethodPost {
+			
+			err := r.ParseMultipartForm(10 << 20)
+			if err != nil {
+				http.Error(w, "ERROR", http.StatusBadRequest)
+				return
+			}
+
+			var verify bool
+			email := r.FormValue("email")
+
+			query := "SELECT EXISTS(SELECT 1 FROM usuarios WHERE email = ?)"
+
+			queryError := database.QueryRow(query, email).Scan(&verify)
+			if queryError != nil {
+				log.Println("ERROR: ", queryError)
+			}
+
+			if verify && email != "" {
+				fmt.Println("")
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(""))
+
+			} else if !verify {
+				fmt.Println("")
+
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(""))
+			}
+
+
+		} else {
+			http.Error(w, "", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+
 func main() {
 	database := database()
 	defer database.Close()
