@@ -223,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
 
                 if (status === 409 && mensagem === "") {
-                    console.log("nome incorreto");
+                    console.log("");
                     incorrectName.style.display = 'block';
 
                     teste("logs", logs);
@@ -231,7 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     incorrectEmail.style.block = 'none';
                     incorrectPassword.style.display = 'none';
                 } else if (status === 409 && mensagem === "") {
-                    console.log("senha incorreta");
+                    console.log("");
                     incorrectPassword.style.display = 'block';
 
                     teste("logs", logs);
@@ -239,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     incorrectName.style.display = 'none';
                     incorrectEmail.style.display = 'none';
                 } else if (status === 409 && mensagem === "") {
-                    console.log("email incorreto");
+                    console.log("");
                     incorrectEmail.style.display = 'block';
 
                     teste("logs", logs);
@@ -253,5 +253,36 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
         };
+    });
+
+    
+    resetPassword.addEventListener("submit", async (form) => {
+        form.preventDefault();
+        const formData = new FormData(form.target);
+
+        try {
+
+            const resetFetch = await fetch("", {
+                method: "POST",
+                body: formData,
+                credentials: "include",
+            })
+
+            const status = resetFetch.status
+            const message = await resetFetch.text()
+            alert(`Status: ${status} Message: ${message}`)
+
+            if (status === 200 && message === "") {
+                alert("");
+
+            } else if (status === 401 && message === "") {
+                alert("");
+            }
+
+        } catch (error) {
+            console.error("ERROR: ", error);
+            alert("SOME ERROR");
+        };
+        
     });
 });
