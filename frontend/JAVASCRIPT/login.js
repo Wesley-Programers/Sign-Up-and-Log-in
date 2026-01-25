@@ -175,17 +175,37 @@ document.addEventListener("DOMContentLoaded", () => {
     const seconds = String(data.getSeconds());
 
 
-    let form = document.getElementById("");
-    let button = document.getElementById("");
+    let form = document.getElementById("formLogIn");
 
-    let incorrectName = document.getElementById("");
-    let incorrectEmail = document.getElementById("");
-    let incorrectPassword = document.getElementById("");
+    let incorrectName = document.getElementById("incorrectName");
+    let incorrectEmail = document.getElementById("incorrectEmail");
+    let incorrectPassword = document.getElementById("incorrectPassword");
 
-    let dontHaveAccount = document.getElementById("");
+    let forgotPassword = document.getElementById("forgotPassword");
+    let inputEmailForResetPassword = document.getElementById("inputEmailForResetPassword");
+    let reset = document.getElementById("reset");
+    let formEmailForResetPassword = document.getElementById("formEmailForResetPassword");
+    let emailForReset = document.getElementById("emailForReset");
+    let passwordForReset = document.getElementById("passwordForReset");
+    let leave = document.getElementById("leave");
+
+    let invalidEmail = document.getElementById("invalidEmail");
+
+    let dontHaveAccount = document.getElementById("dontHaveAccount");
 
     dontHaveAccount.addEventListener("click", () => {
         window.location.href = '../HTML/index.html'
+    });
+
+    forgotPassword.addEventListener("click", () => {
+        reset.style.display = 'block';
+        emailForReset.style.display = 'block';
+        passwordForReset.style.display = 'none';
+    });
+
+    leave.addEventListener("click", () => {
+        reset.style.display = 'none';
+        inputEmailForResetPassword.value = '';
     });
     
 
@@ -209,8 +229,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 teste("lastLogin", lastLogin);
 
-                console.log("Is everything alright");
-
                 incorrectName.style.display = 'none';
                 incorrectEmail.style.display = 'none';
                 incorrectPassword.style.display = 'none';
@@ -223,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
 
                 if (status === 409 && mensagem === "") {
-                    console.log("");
+                    console.log("nome incorreto");
                     incorrectName.style.display = 'block';
 
                     teste("logs", logs);
@@ -231,7 +249,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     incorrectEmail.style.block = 'none';
                     incorrectPassword.style.display = 'none';
                 } else if (status === 409 && mensagem === "") {
-                    console.log("");
+                    console.log("senha incorreta");
                     incorrectPassword.style.display = 'block';
 
                     teste("logs", logs);
@@ -239,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     incorrectName.style.display = 'none';
                     incorrectEmail.style.display = 'none';
                 } else if (status === 409 && mensagem === "") {
-                    console.log("");
+                    console.log("email incorreto");
                     incorrectEmail.style.display = 'block';
 
                     teste("logs", logs);
@@ -249,14 +267,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 };
             };
 
-        } catch(error) {
+        } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
         };
+
     });
 
     
-    resetPassword.addEventListener("submit", async (form) => {
+    formEmailForResetPassword.addEventListener("submit", async (form) => {
         form.preventDefault();
         const formData = new FormData(form.target);
 
@@ -265,24 +284,31 @@ document.addEventListener("DOMContentLoaded", () => {
             const resetFetch = await fetch("", {
                 method: "POST",
                 body: formData,
-                credentials: "include",
             })
 
             const status = resetFetch.status
             const message = await resetFetch.text()
-            alert(`Status: ${status} Message: ${message}`)
+            alert(`Status: ${status} Message: ${message}`);
+            
+            const teste = message.split("VALID EMAIL");
+            alert(teste);
 
-            if (status === 200 && message === "") {
-                alert("");
+            const anotherTest = message.split("http");
+            alert(anotherTest[0]);
 
-            } else if (status === 401 && message === "") {
-                alert("");
+            if (status === 200) {
+                alert("NEXT");
+
+            } else if (status === 400 && anotherTest === "INVALID EMAIL") {
+                alert("INVALID EMAIL");
+                invalidEmail.style.display = 'block';
             }
 
         } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
         };
-        
+
     });
+
 });
