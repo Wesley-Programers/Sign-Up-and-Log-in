@@ -1,311 +1,81 @@
-document.addEventListener("DOMContentLoaded", () => {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
 
-    function teste(setItem, array) {
+        #forgotPassword, #dontHaveAccount, #leave {
+            cursor: pointer;
+        }
 
-        if (month < 10 && day > 10) {
+        #reset {
+            border: 2px solid white;
+            display: none;
+        }
 
-            if (hours < 10 && minutes > 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${newHours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+        .invisible {
+            display: none;
+        }
 
-            } else if (hours > 10 && minutes < 10 && seconds > 10) {
-                let newMinutes = `0${minutes}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${hours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+    </style>
+</head>
+<body>
 
-            } else if (hours > 10 && minutes > 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${hours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+    <div>
+        <p id="welcomeBack">WELCOME BACK</p>
+        <p id="signInTitle">LOG IN</p>
+        <p id="forgotPassword">Forgot the password?</p>
+        <p id="dontHaveAccount">Don't have an account?</p>
 
-            } else if (hours < 10 && minutes < 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                let newMinutes = `0${minutes}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${newHours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+        <p id="incorrectName" class="invisible">Incorrect name</p>
+        <p id="incorrectEmail" class="invisible">Incorrect email</p>
+        <p id="incorrectPassword" class="invisible">Incorrect password</p>
+        
 
-            } else if (hours > 10 && minutes < 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                let newMinutes = `0${minutes}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${hours}:${newMinutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+        <form id="formLogIn" action="" method="post">
 
-            } else if (hours < 10 && minutes > 10 && seconds < 10) {
-                let newHours = `0${hours}`;
-                let newSeconds = `0${seconds}`;
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${newHours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+            <div id="div-sign-in">
+                <input type="text" id="inputNameEmail" required name="nameEmail" placeholder="Name or Email">
+                <input type="password" id="inputPassword" required name="passwordLog" placeholder="Password">
 
-            } else {
-                let newMonth = `0${month}`;
-                const logMessage = ` ${day}/${newMonth}/${year} As ${hours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+                <button id="signInButton" type="submit">Log in</button>
+            </div>
 
-            }
-            
-        } else if (day < 10 && month > 10) {
-            
-            if (hours < 10 && minutes > 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${newHours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
+        </form>
 
-            } else if (hours > 10 && minutes < 10 && seconds > 10) {
-                let newMinutes = `0${minutes}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${hours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours > 10 && minutes > 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${hours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours < 10 && minutes < 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                let newMinutes = `0${minutes}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${newHours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours > 10 && minutes < 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                let newMinutes = `0${minutes}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${hours}:${newMinutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours < 10 && minutes > 10 && seconds < 10) {
-                let newHours = `0${hours}`;
-                let newSeconds = `0${seconds}`;
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${newHours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else {
-                let newDay = `0${day}`
-                const logMessage = ` ${newDay}/${month}/${year} As ${hours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            }
-
-        } else if (day > 10 && month > 10) {
-
-            if (hours < 10 && minutes > 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                const logMessage = ` ${day}/${month}/${year} As ${newHours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours > 10 && minutes < 10 && seconds > 10) {
-                let newMinutes = `0${minutes}`;
-                const logMessage = ` ${day}/${month}/${year} As ${hours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours > 10 && minutes > 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                const logMessage = ` ${day}/${month}/${year} As ${hours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, setarrayItem);
-
-            } else if (hours < 10 && minutes < 10 && seconds > 10) {
-                let newHours = `0${hours}`;
-                let newMinutes = `0${minutes}`;
-                const logMessage = ` ${day}/${month}/${year} As ${newHours}:${newMinutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours > 10 && minutes < 10 && seconds < 10) {
-                let newSeconds = `0${seconds}`;
-                let newMinutes = `0${minutes}`;
-                const logMessage = ` ${day}/${month}/${year} As ${hours}:${newMinutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else if (hours < 10 && minutes > 10 && seconds < 10) {
-                let newHours = `0${hours}`;
-                let newSeconds = `0${seconds}`;
-                const logMessage = ` ${day}/${month}/${year} As ${newHours}:${minutes}:${newSeconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-
-            } else {
-                const logMessage = ` ${day}/${month}/${year} As ${hours}:${minutes}:${seconds}`;
-                array.push(logMessage);
-                localStorage.setItem(`${setItem}`, array);
-            };
-
-        };
-    };
-
-    let logs = [];
-    let lastLogin = [];
-
-    const data = new Date();
-    const day = String(data.getDate());
-    const month = String(data.getMonth() + 1);
-    const year = data.getFullYear();
-
-    const hours = String(data.getHours());
-    const minutes = String(data.getMinutes());
-    const seconds = String(data.getSeconds());
+        <select name="languages" id="languages" onchange="newLanguage()">
+            <option value="english" selected id="englishLanguage">English</option>
+        </select>
 
 
-    let form = document.getElementById("formLogIn");
+        <div id="reset">
 
-    let incorrectName = document.getElementById("incorrectName");
-    let incorrectEmail = document.getElementById("incorrectEmail");
-    let incorrectPassword = document.getElementById("incorrectPassword");
+            <div id="emailForReset">
+                <span id="email">Enter your account email to reset your password</span>
+                <span id="leave">LEAVE</span>
 
-    let forgotPassword = document.getElementById("forgotPassword");
-    let inputEmailForResetPassword = document.getElementById("inputEmailForResetPassword");
-    let reset = document.getElementById("reset");
-    let formEmailForResetPassword = document.getElementById("formEmailForResetPassword");
-    let emailForReset = document.getElementById("emailForReset");
-    let passwordForReset = document.getElementById("passwordForReset");
-    let leave = document.getElementById("leave");
+                <form action="" method="post" id="formEmailForResetPassword">
+                    <input type="text" required placeholder="Your email" name="email" id="inputEmailForResetPassword">
 
-    let invalidEmail = document.getElementById("invalidEmail");
+                    <button type="submit">SEND</button>
+                </form>
+            </div>
 
-    let dontHaveAccount = document.getElementById("dontHaveAccount");
+        </div>
 
-    dontHaveAccount.addEventListener("click", () => {
-        window.location.href = '../HTML/index.html'
-    });
+        <div id="alerts">
+            <span id="invalidEmail" class="invisible">Invalid email</span>
+        </div>
 
-    forgotPassword.addEventListener("click", () => {
-        reset.style.display = 'block';
-        emailForReset.style.display = 'block';
-        passwordForReset.style.display = 'none';
-    });
+    </div>
 
-    leave.addEventListener("click", () => {
-        reset.style.display = 'none';
-        inputEmailForResetPassword.value = '';
-    });
+    <script src="../Javascript/login.js"></script>
     
-
-    form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target)
-
-        try {
-
-            const fetchLogin = await fetch("", {
-                method: "POST",
-                credentials: "include",
-                body: formData
-            })
-
-            const status = fetchLogin.status
-            const mensagem = await fetchLogin.text()
-            alert(`Status: ${status} Mensagem: ${mensagem}`);
-
-            if (status === 200 && mensagem === "") {
-
-                teste("lastLogin", lastLogin);
-
-                incorrectName.style.display = 'none';
-                incorrectEmail.style.display = 'none';
-                incorrectPassword.style.display = 'none';
-
-                setTimeout(() => {
-                    window.location.href = ''
-                }, 500);
-
-            } else {
-                e.preventDefault();
-
-                if (status === 409 && mensagem === "") {
-                    incorrectName.style.display = 'block';
-
-                    teste("logs", logs);
-
-                    incorrectEmail.style.block = 'none';
-                    incorrectPassword.style.display = 'none';
-                } else if (status === 409 && mensagem === "") {
-                    incorrectPassword.style.display = 'block';
-
-                    teste("logs", logs);
-
-                    incorrectName.style.display = 'none';
-                    incorrectEmail.style.display = 'none';
-                } else if (status === 409 && mensagem === "") {
-                    incorrectEmail.style.display = 'block';
-
-                    teste("logs", logs);
-                    
-                    incorrectName.style.display = 'none';
-                    incorrectPassword.style.display = 'none';
-                };
-            };
-
-        } catch (error) {
-            console.error("ERROR: ", error);
-            alert("SOME ERROR");
-        };
-
-    });
-
-    
-    formEmailForResetPassword.addEventListener("submit", async (form) => {
-        form.preventDefault();
-        const formData = new FormData(form.target);
-
-        try {
-
-            const resetFetch = await fetch("", {
-                method: "POST",
-                body: formData,
-            })
-
-            const status = resetFetch.status
-            const message = await resetFetch.text()
-            alert(`Status: ${status} Message: ${message}`);
-            
-            const teste = message.split("VALID EMAIL");
-            alert(teste);
-
-            const anotherTest = message.split("http");
-            alert(anotherTest[0]);
-
-            if (status === 200) {
-                alert("NEXT");
-
-            } else if (status === 400 && anotherTest === "INVALID EMAIL") {
-                alert("INVALID EMAIL");
-                invalidEmail.style.display = 'block';
-            
-
-        } catch (error) {
-            console.error("ERROR: ", error);
-            alert("SOME ERROR");
-        };
-
-    });
-
-});
+</body>
+</html>
