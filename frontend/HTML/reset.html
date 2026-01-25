@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset the password</title>
+</head>
+<body>
+    
+    <div id="passwordForReset">
+
+        <form action="http://127.0.0.1:8000/reset/password" method="post" id="resetForm">
+            <input type="password" name="currentPassword" id="currentPassword" required placeholder="Your current password">
+            <input type="password" name="newPassword" id="newPassword" required placeholder="Your new password">
+            <input type="password" name="confirmPassword" id="confirmPassword" required placeholder="Confirm the new password">
+
+            <button type="submit">CHANGE</button>
+        </form>
+        <span id="leaveResetPassword">LEAVE</span>
+
+    </div>
+
+    <div id="alerts">
+        <span id="passwordResetSuccessfully" class="invisible">Password reset successfully</span>
+
+        <span id="wrongPassword" class="invisible">Wrong password</span>
+        <span id="theSamePassword" class="invisible">The password are the same</span>
+        <span id="shortPassword" class="invisible">Short passoword</span>
+        <span id="passwordConfirmationIsWrong" class="invisible">Password confirmation is wrong</span>
+    </div>
+
+    <script>
+
+        document.addEventListener("DOMContentLoaded", () => {
+
+            let lastAttemptToChangeThePassword = [];
+
+            let wrongPassword = document.getElementById("wrongPassword");
+            let theSamePassword = document.getElementById("theSamePassword");
+            let shortPassword = document.getElementById("shortPassword");
+            let passwordConfirmationIsWrong = document.getElementById("passwordConfirmationIsWrong");
+            let passwordResetSuccessfully = document.getElementById("passwordResetSuccessfully");
+
+            let leaveResetPassword = document.getElementById("leaveResetPassword");
+            let currentPassword = document.getElementById("currentPassword");
+            let newPassword = document.getElementById("newPassword");
+            let resetForm = document.getElementById("resetForm");
+            let confirmPassword = document.getElementById("confirmPassword");
+
+            leaveResetPassword.addEventListener("click", () => {
+                passwordForReset.style.display = 'none';
+                currentPassword.value = '';
+                newPassword.value = '';
+                confirmPassword.value = '';
+            });
+
+            resetForm.addEventListener("submit", async (form) => {
+
+                form.preventDefault();
+                const formData = new FormData(form.target)
+
+                const token = new URLSearchParams(window.location.search).get('token');
+
+                try {
+
+                    const fetchResetPassword = await fetch("", {
+                        method: "POST",
+                        body: formData,
+                    })
+
+                    const status = fetchResetPassword.status
+                    const message = await fetchResetPassword.text()
+                    alert(`Status: ${status} Message: ${message}`)
+
+                    if (status === 200 && message === "VALID PASSWORD") {
+                        passwordResetSuccessfully.style.display = 'block';
+
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+
+                    } else if (status === 400 && message === "INCORRECT PASSWORD") {
+                        wrongPassword.style.display = 'block';
+                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
+
+                    } else if (status === 400 && message === "THE PASSWORD ARE THE SAME") {
+                        theSamePassword.style.display = 'block';
+                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
+
+                    } else if (status === 400 && message === "SHORT PASSWORD") {
+                        shortPassword.style.display = 'block';
+                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
+
+                    } else if (status === 400 && message === "PASSWORD CONFIRMATION IS WRONG") {
+                        passwordConfirmationIsWrong.style.display = 'block';
+                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
+
+                    }
+
+                } catch (error) {
+                    console.log("ERROR: ", error);
+                    alert("SOME ERROR");
+                };
+            });
+
+        });
+
+    </script>
+    
+</body>
+</html>
