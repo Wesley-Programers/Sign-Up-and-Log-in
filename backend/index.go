@@ -30,11 +30,6 @@ type Data struct {
 	password string
 }
 
-type Session struct {
-	UserID int
-	Expires time.Time
-}
-
 var dataSlice []Data
 
 
@@ -250,7 +245,6 @@ func handlerLogIn(database *sql.DB) http.HandlerFunc {
 
 
 func database() *sql.DB {
-
 	return database
 }
 
@@ -262,11 +256,11 @@ func sqlTable(db *sql.DB) {
 	}
 
 	_, err := db.Exec(`
-	CREATE TABLE IF NOT EXISTS usuarios (
+	CREATE TABLE IF NOT EXISTS users (
 		id INT AUTO_INCREMENT PRIMARY KEY,
-		name VARCHAR(80),
-		email VARCHAR(80) UNIQUE,
-		password VARCHAR(100),
+		name VARCHAR(80) NOT NULL,
+		email VARCHAR(80) UNIQUE NOT NULL,
+		password VARCHAR(159) NOT NULL,
 		created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);`)
 
@@ -350,6 +344,9 @@ func verifyLogin(database *sql.DB, nameLogin, emailLogin, passwordLogin string) 
 func handlerDeleteAccount(database *sql.DB) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Content-Type", "text/plain")
 
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
@@ -365,54 +362,61 @@ func handlerDeleteAccount(database *sql.DB) http.HandlerFunc {
 				http.Error(w, "ERROR: ", http.StatusBadRequest)
 				return
 			}
-			
-			query := "DELETE FROM usuarios WHERE password = ?"
-			queryEmailSelect := "SELECT password FROM usuarios WHERE email = ?"
-			queryPasswordSelect := "SELECT EXISTS(SELECT 1 FROM usuarios WHERE email = ?)"
-
-			var email bool
-			var passwordHash string
 
 			emailConfirm := r.FormValue("emailConfirm")
 			passwordConfirm := r.FormValue("passwordConfirm")
 
-			testErr := database.QueryRow(queryEmailSelect, emailConfirm).Scan(&passwordHash)
-			if testErr != nil {
-				log.Println("ERROR: ", testErr)
-			} else if testErr == sql.ErrNoRows {
-				fmt.Println("")
+			var email bool
+			var passwordHash string
+			
+			query := "DELETE FROM usuarios WHERE password = ?"
+			queryEmailSelect := "SELECT EXISTS(SELECT 1 FROM usuarios WHERE email = ?)"
+			queryPasswordSelect := "SELECT password FROM usuarios WHERE email = ?"
+
+			queryEmailErr := database.QueryRow(queryEmailSelect, emailConfirm).Scan(&email)
+			if queryEmailErr != nil {
+				log.Println("ERROR: ", queryEmailErr)
+			}
+
+			queryPasswordErr := database.QueryRow(queryPasswordSelect, emailConfirm).Scan(&passwordHash)
+			if queryPasswordErr != nil {
+				log.Println("ERROR: ", queryPasswordErr)
+
+			} else if queryPasswordErr == sql.ErrNoRows {
+				fmt.Println("SOMETHING")
 				return
 			}
 
 			passwordHashCompare := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(passwordConfirm))
 
-			errEmail := database.QueryRow(queryPasswordSelect, emailConfirm).Scan(&email)
-			if errEmail != nil {
-				log.Println("ERROR: ", errEmail)
-			}
-
-			if passwordHashCompare != nil {
-				fmt.Println("")
-
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(""))
-				
-			} else if passwordHashCompare == nil {
-				fmt.Println("")
+			if passwordHashCompare == nil && email {
+				fmt.Println("SENHA CORRETA")
 
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(""))
+				w.Write([]byte("EVERYTHING VALID"))
 				_, err := database.Exec(query, passwordHashCompare)
 
 				if err != nil {
-					log.Fatal("", err)
+					log.Fatal("SOMETHING BAD: ", err)
 				}
+				
+			} else if passwordHashCompare != nil {
+				fmt.Println("SENHA ERRADA")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("INCORRECT PASSWORD"))
 
 			} else if !email {
-				fmt.Println("")
+				fmt.Println("INCORRECT EMAIL")
 
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(""))
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("INCORRECT EMAIl"))
+
+			} else {
+				log.Println("SOME ERROR")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("SOME ERROR"))
 			}
 
 		} else {
@@ -426,6 +430,90 @@ func resetPassword(database *sql.DB) http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Content-Type", "text/plain")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		log.SetFlags(log.Lshortfile)
+
+		if r.Method == http.MethodPost {
+
+			var id int
+			var verify string
+
+			email := r.FormValue("email")
+
+			query := "SELECT id, email FROM usuarios WHERE email = ?"
+
+			queryError := database.QueryRow(query, email).Scan(&id, &verify)
+			if queryError != nil {
+				if queryError == sql.ErrNoRows {
+					log.Println("EMAIL NOT FOUND")
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte("INVALID EMAIL"))	
+					return
+				}
+				log.Println("ERROR: ", queryError)
+				return
+			}
+
+			if verify == email {
+				fmt.Println("VALID EMAIL, NEXT")
+
+				teste = append(teste, email)
+				fmt.Println("EMAIL IN SLICE HERE: ", teste[0])
+
+				go func() {
+					<-time.After(200 * time.Second)
+					teste = teste[:0]
+					fmt.Println("EMPTY SLICE")
+				}()
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("VALID EMAIL"))
+
+				token, err := generateTokens()
+				if err != nil {
+					log.Println("ERROR: ", err)
+					return
+				}
+
+				expiresAt := time.Now().Add(25 * time.Minute)
+				_, erro := database.Exec(
+					"INSERT INTO password_token (user_id, token, expires_at) VALUES (?, ?, ?)", id, token, expiresAt,
+				)
+				if erro != nil {
+					log.Println("ERROR: ", erro)
+				}
+
+				link := generateLink(token)
+				w.Write([]byte(link))
+				
+			} else {
+				log.Println("SOME ERROR")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("SOME ERROR"))
+			}
+
+		} else {
+			http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+
+func reset(database *sql.DB) http.HandlerFunc {
+
+	return func (w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Content-Type", "text/plain")
+
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -435,50 +523,131 @@ func resetPassword(database *sql.DB) http.HandlerFunc {
 
 		if r.Method == http.MethodPost {
 			
-			err := r.ParseMultipartForm(10 << 20)
-			if err != nil {
-				http.Error(w, "ERROR", http.StatusBadRequest)
+			var id int
+			var verify string
+			var token string
+
+			password := r.FormValue("currentPassword")
+			newPassword := r.FormValue("newPassword")
+			confirmPassword := r.FormValue("confirmPassword")
+
+			email := teste[0]
+
+			queryUpdatePassword, updatePasswordErro := database.Prepare("UPDATE usuarios SET password = ? WHERE email = ?")
+			if updatePasswordErro != nil {
+				log.Println("ERROR: ", updatePasswordErro)
+			}
+
+			query := "SELECT id, password FROM usuarios WHERE email = ?"
+			queryPasswordError := database.QueryRow(query, email).Scan(&id, &verify)
+			if queryPasswordError != nil {
+				if queryPasswordError == sql.ErrNoRows {
+					log.Println("PASSWORD NOT FOUND")
+					return
+				}
+				log.Println("ERROR: ", queryPasswordError)
 				return
 			}
 
-			var verify bool
-			email := r.FormValue("email")
-
-			query := "SELECT EXISTS(SELECT 1 FROM usuarios WHERE email = ?)"
-
-			queryError := database.QueryRow(query, email).Scan(&verify)
-			if queryError != nil {
-				log.Println("ERROR: ", queryError)
+			getToken := "SELECT token FROM password_token WHERE user_id = ?"
+			getTokenError := database.QueryRow(getToken, id).Scan(&token)
+			if getTokenError != nil {
+				if getTokenError == sql.ErrNoRows {
+					log.Println("ID NOT FOUND")
+					return
+				}
+				log.Println("ERROR: ", getTokenError)
+				return
 			}
 
-			if verify && email != "" {
-				fmt.Println("")
+			passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(password))
+			if passwordHash == nil && newPassword != "" && password != newPassword && utf8.RuneCountInString(newPassword) >= 8 && newPassword == confirmPassword {
+				fmt.Println("VALID PASSWORD")
 
+				hash, err := hashPassword(newPassword)
+				if err != nil {
+					log.Println("ERROR: ", err)
+				}
+
+				fmt.Println("NEW PASSWORD: ", hash)
+
+				_, errorPassword := queryUpdatePassword.Exec(hash, teste[0])
+				if errorPassword != nil {
+					log.Println("ERROR: ", errorPassword)
+				}
+
+				teste = teste[:0]
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(""))
+				w.Write([]byte("VALID PASSWORD"))
 
-			} else if !verify {
-				fmt.Println("")
+			} else if passwordHash != nil {
+				fmt.Println("WRONG PASSWORD")
 
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(""))
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("INCORRECT PASSWORD"))
+
+			} else if password == newPassword {
+				fmt.Println("THE SAME PASSWORD")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("THE PASSWORD ARE THE SAME"))
+
+			} else if utf8.RuneCountInString(newPassword) < 8 {
+				fmt.Println("SHORT PASSWORD")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("SHORT PASSWORD"))
+
+			} else if newPassword != confirmPassword {
+				fmt.Println("PASSWORD CONFIRMATION IS WRONG")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("PASSWORD CONFIRMATION IS WRONG"))
+
+			} else {
+				log.Println("SOME ERROR")
+
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte("SOME ERROR"))
 			}
-
 
 		} else {
-			http.Error(w, "", http.StatusMethodNotAllowed)
+			http.Error(w, "METHOD NOT PERMITED", http.StatusMethodNotAllowed)
 		}
 	}
 }
 
 
-func main() {
-	database := database()
-	defer database.Close()
+func generateTokens() (string, error) {
+	bytes := make([]byte, 32)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
 
-	http.HandleFunc("/sign", handler(database))
-	http.HandleFunc("/login", handlerLogIn(database))
-	http.HandleFunc("/main", handlerRecoverCookie(database))
+
+func generateLink(token string) string {
+	return "" + token
+}
+
+
+func main() {
+	db := database()
+	defer db.Close()
+
+	http.HandleFunc("/sign", handler(db))
+	http.HandleFunc("/login", handlerLogIn(db))
+
+	http.HandleFunc("/change", handlerChangeName(db))
+	http.HandleFunc("/email", handlerChangeEmail(db))
+
+	http.HandleFunc("/logout", logoutHandler(db))
+	http.HandleFunc("/delete", handlerDeleteAccount(db))
+
+	http.HandleFunc("/reset", resetPassword(db))
+	http.HandleFunc("/reset/password", reset(db))
 	
 	fmt.Println("SERVER OPEN WITH GOLANG")
+	http.ListenAndServe("", nil)
 }
