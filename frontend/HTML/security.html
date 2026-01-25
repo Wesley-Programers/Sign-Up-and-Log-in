@@ -12,7 +12,6 @@
 
         #change-email, #another-email, #change-name {
             cursor: pointer;
-            display: none;
         }
 
         #change-email {
@@ -20,14 +19,25 @@
             top: 50%;
         }
 
-        #div-change-email-window, #div-change-name-window {
+        .displayNone {
+            display: none;
+        }
+
+        #div-change-email-window, #div-change-name-window, #deleteSession {
             border: 2px solid white;
             display: none;
         }
 
-        #saveNewName, #saveNewEmail {
+        #saveNewName, #saveNewEmail, #leaveChangeEmail, #leaveChangeName, #clear, #leaveDeleteAccount, #deleteAccount {
             cursor: pointer;
         }
+
+        #currentEmailWrongMessage, #currentNameWrongMessage, #diferentEmailsMessage, #someErrorMessage,
+        #someError, #incorrectPasswordMessage, #incorrectEmail, #incorrectPassword, #differentEmailsMessage, #newEmailIsTheSame, #someError,
+        #newNameIsTheSame {
+            display: none;
+        }
+
     </style>
 </head>
 <body>
@@ -36,8 +46,6 @@
 
         
         <div id="security-account">
-            <span id="main-name">MAIN NAME: </span>
-            <span id="main-email">MAIN EMAIL: </span>
 
             <span id="change-name">CHANGE NAME</span>
             <span id="change-email">CHANGE EMAIL</span>
@@ -48,40 +56,73 @@
             <div id="div-change-name-window">
                 <span id="title">CHANGE NAME</span>
 
-                <input type="text" id="newName" name="name" placeholder="Name">
-                <span id="leave">LEAVE</span>
-                <span id="saveNewName">SAVE</span>
+                <form action="" method="post" id="formChangeName">
+                    <input type="text" id="currentName" name="currentName" placeholder="Your current name" required>
+                    <input type="text" id="newName" name="newName" placeholder="Your new name" required>
+
+                    <button type="submit" id="saveNewName">SAVE</button>
+                </form>
+
+                <span id="currentNameWrongMessage">Invalid current name</span>
+                <span id="newNameIsTheSame">New name can't be the same</span>
+                <span id="someErrorMessage">Some unexpected error occurred</span>
+
+                <span id="leaveChangeName">LEAVE</span>
+                <!-- <span id="saveNewName">SAVE</span> -->
             </div>
 
             
             <div id="div-change-email-window">
                 <span id="title">CHANGE EMAIL</span>
 
-                <form action="" method="post">
+                <form action="http://127.0.0.1:8000/email" method="post" id="formChangeEmail">
 
-                    <input type="text" id="currentEmail" name="currentEmail" placeholder="Your email">
-                    <input type="text" id="newEmail" name="newEmail" placeholder="New email">
-                    <input type="text" id="confirmNewEmal" name="confirmNewEmail" placeholder="Confirm the email">
-                    <input type="password" name="currentPassword" id="currentPassword" placeholder="Your password">
+                    <input type="text" id="currentEmail" name="currentEmail" placeholder="Your email" required>
+                    <input type="text" id="newEmail" name="newEmail" placeholder="New email" required>
+                    <input type="text" id="confirmNewEmail" name="confirmNewEmail" placeholder="Confirm the email" required>
+                    <input type="password" name="currentPassword" id="currentPassword" placeholder="Your password" required>
+
+                    <button type="submit" id="saveNewEmail">SAVE</button>
 
                 </form>
 
-                <span id="leave">LEAVE</span>
-                <span id="saveNewEmail">SAVE</span>
+                <span id="currentEmailWrongMessage">Current email invalid</span>
+                <span id="differentEmailsMessage">Different emails were typed</span>
+                <span id="newEmailIsTheSame">The new email can't be the same</span>
+                <span id="incorrectPasswordMessage">Invalid password</span>
+                <span id="someError">Some unexpected error occurred</span>
+
+                <span id="leaveChangeEmail">LEAVE</span>
             </div>
         </div>
 
 
         <div id="security-access-and-login">
-            <span id="last-change-password"></span>
+
             <span id="last-logins"></span>
-            <span id="change-password"></span>
             <span id="authentication"></span>
+            <span id="change-password"></span>
+            <span id="last-change-password"></span>
+
         </div>
 
 
         <div id="security-logs">
-            <span id="logs"></span>
+
+            <span id="clear">CLEAR</span>
+
+            <span id="logLastLoginAttempt">LAST LOGIN ATTEMPT: </span>
+            <span id="logLastEmailChange">LAST CHANGE EMAIL: </span>
+            <span id="logLastNameChange">LAST CHANGE NAME: </span>
+            <span id="logLastLogin">LAST LOGIN: </span>
+            <span id="logLastAttemptToChangeTheEmail">LAST ATTEMPT TO CHANGE THE EMAIL: </span>
+            <span id="logLastAttemptToDeleteTheAccount">LAST ATTEMPT TO DELETE THE ACCOUNT: </span>
+            <span id="loglastAttemptToChangeThePassword">LAST ATTEMPT TO CHANGE THE PASSWORD: </span>
+            <span id="logLastLogOut"></span>
+            <span id="logLastAccountDeactivation"></span>
+            <span id="logLastDeactivationAuthentication"></span>
+            <span id="logLastAttemptToDeactivateTheAccount"></span>
+
         </div>
 
 
@@ -91,10 +132,10 @@
             <span id="alert-before-delete"></span>
 
 
+            <span id="deleteAccount">DELETE ACCOUNT</span>
             <div id="deleteSession">
-                <span id="deleteAccount"></span>
 
-                <form action="e" method="post" id="deleteAccountForm">
+                <form action="" method="post" id="deleteAccountForm">
                     <input type="text" name="emailConfirm" id="emailConfirm" placeholder="Your email" required>
                     <input type="password" name="passwordConfirm" id="passwordConfirm" placeholder="Confirm the password" required>
     
@@ -103,6 +144,7 @@
 
                 <span id="incorrectPassword">Incorrect password</span>
                 <span id="incorrectEmail">Incorrect email</span>
+                <span id="someErrorDeleteAccount">Some unexpected error occurred</span>
                 <span id="leaveDeleteAccount">LEAVE</span>
             </div>
 
@@ -112,57 +154,6 @@
     </div>
 
     <script src="../Javascript/security.js"></script>
-    
-    <script>
-        let mainEmail = document.getElementById("main-email");
-        let changeEmail = document.getElementById("change-email");
-        let changeName = document.getElementById("change-name");
-        let change = document.getElementById("div-change-name-window")
-
-        const cookieGet = (name) => {
-            const test = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-            if (test) return test[2];
-            return null;
-        }
-
-        changeName.addEventListener("click", () => {
-            change.style.display = "block";
-        });
-
-        changeEmail.addEventListener("click", () => {
-
-        });
-
-        window.addEventListener("DOMContentLoaded", () => {
-
-            console.log("COOKIES: ", document.cookie);
-            console.log("oi");
-        
-            const cookieBase64 = cookieGet("");
-            console.log("COOKIE ENCNTRADO: ", cookieBase64)
-
-            if (cookieBase64) {
-                try {
-                    const test = atob(cookieBase64)
-                    const dataWithout = decodeURIComponent(escape(test));
-                    const [name, email] = dataWithout.split("|");
-
-                    document.getElementById("main-name").innerHTML = name
-                    document.getElementById("main-email").innerText = email
-
-                    console.log("USER NAME: ", name);
-                    console.log("USER EMAIL: ", email);
-
-                } catch ( error ) {
-                    console.error("ERROR: ", error);
-                    alert("SOME ERROR");
-                };
-            } else {
-                console.log("NOTHING");
-            };
-
-        });
-    </script>
-    
+   
 </body>
 </html>
