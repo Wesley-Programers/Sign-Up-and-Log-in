@@ -482,7 +482,7 @@ func resetPassword(database *sql.DB) http.HandlerFunc {
 					return
 				}
 
-				expiresAt := time.Now().Add(25 * time.Minute)
+				expiresAt := time.Now().Add(5 * time.Minute)
 				_, erro := database.Exec(
 					"INSERT INTO password_token (user_id, token, expires_at) VALUES (?, ?, ?)", id, token, expiresAt,
 				)
@@ -560,20 +560,47 @@ func reset(database *sql.DB) http.HandlerFunc {
 				return
 			}
 
+			var idToken int
+			var user_id int
+			var expires_at string
+			var used bool
+
+			getInformation := "SELECT id, user_id, expires_at, used FROM password_token WHERE token = ?"
+			getInformationError := database.QueryRow(getInformation, token).Scan(&idToken, &user_id, &expires_at, &used)
+			if getInformationError != nil {
+				if getInformationError == sql.ErrNoRows {
+					log.Println("NOT FOUND")
+					return
+				}
+				log.Println("ERROR: ", getInformationError)
+				return
+			}
+
+			fmt.Println("ID TOKEN: ", idToken)
+			fmt.Println("USER ID: ", user_id)
+			fmt.Println("EXPIRES AT: ", expires_at)
+			fmt.Println("USED: ", used)
+
 			passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(password))
 			if passwordHash == nil && newPassword != "" && password != newPassword && utf8.RuneCountInString(newPassword) >= 8 && newPassword == confirmPassword {
 				fmt.Println("VALID PASSWORD")
 
 				hash, err := hashPassword(newPassword)
 				if err != nil {
-					log.Println("ERROR: ", err)
+					log.Fatal("ERROR: ", err)
+					return
 				}
-
-				fmt.Println("NEW PASSWORD: ", hash)
 
 				_, errorPassword := queryUpdatePassword.Exec(hash, teste[0])
 				if errorPassword != nil {
-					log.Println("ERROR: ", errorPassword)
+					log.Fatal("ERROR: ", errorPassword)
+					return
+				}
+
+				_, tokenUsedError := database.Exec("UPDATE password_token SET used = TRUE WHERE user_id = ?", user_id)
+				if tokenUsedError != nil {
+					log.Fatal("ERROR: ", tokenUsedError)
+					return 
 				}
 
 				teste = teste[:0]
@@ -633,8 +660,8 @@ func generateLink(token string) string {
 
 
 func main() {
-	db := database()
-	defer db.Close()
+	database := database()
+	defer database.Close()
 
 	http.HandleFunc("/sign", handler(db))
 	http.HandleFunc("/login", handlerLogIn(db))
