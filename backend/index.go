@@ -576,11 +576,6 @@ func reset(database *sql.DB) http.HandlerFunc {
 				return
 			}
 
-			fmt.Println("ID TOKEN: ", idToken)
-			fmt.Println("USER ID: ", user_id)
-			fmt.Println("EXPIRES AT: ", expires_at)
-			fmt.Println("USED: ", used)
-
 			passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(password))
 			if passwordHash == nil && newPassword != "" && password != newPassword && utf8.RuneCountInString(newPassword) >= 8 && newPassword == confirmPassword {
 				fmt.Println("VALID PASSWORD")
@@ -603,9 +598,24 @@ func reset(database *sql.DB) http.HandlerFunc {
 					return 
 				}
 
-				teste = teste[:0]
+				context, cancel := context.WithCancel(context.Background())
+
+				go func(context context.Context) {
+					select {
+					case <-time.After(20 * time.Second):
+						teste = teste[:0]
+						fmt.Println("")
+
+					case <-ctx.Done():
+						fmt.Println("")
+					}
+					
+				}(context)
+				
 				w.WriteHeader(http.StatusOK)
 				w.Write([]byte("VALID PASSWORD"))
+
+				cancel()
 
 			} else if passwordHash != nil {
 				fmt.Println("WRONG PASSWORD")
@@ -656,6 +666,112 @@ func generateTokens() (string, error) {
 
 func generateLink(token string) string {
 	return "" + token
+}
+
+
+func removeExpiredToken(database *sql.DB) {
+
+	_, queryError := database.Exec("DELETE FROM password_token WHERE expires_at < NOW()")
+	if queryError != nil {
+		log.Println("ERROR: ", queryError)
+		return
+	}
+
+	log.Println("TOKENS REMOVED")
+
+}
+
+
+func limitOfAttempts(database *sql.DB, email string) (bool, error) {
+
+	var emailCount int
+
+	err := database.QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ? AND attempt_time > ?", email, time.Now().Add(-15*time.Minute)).Scan(&emailCount)
+	if err != nil {
+		return false, err
+	}
+
+	if emailCount >= 4 {
+		return false, nil
+	}
+
+	return true, nil
+
+}
+
+
+func attemptLogs(database *sql.DB, email string) error {
+	_, err := database.Exec("INSERT INTO attempts(email) VALUES(?)", email)
+	return err
+}
+
+
+func startToRemoverExpiredTokens(database *sql.DB) {
+
+	ticker := time.NewTicker(10 * time.Second)
+
+	go func() {
+		for range ticker.C {
+			removeExpiredToken(database)
+		}
+	}()
+
+}
+
+
+func validTokenHandler(database *sql.DB) http.HandlerFunc {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Content-Type", "text/plain")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		log.SetFlags(log.Lshortfile)
+
+		if r.Method == http.MethodPost {
+
+			var id int
+			var expires_at time.Time
+			var used bool
+	
+			email := teste[0]
+			err := database.QueryRow("SELECT id FROM usuarios WHERE email = ?", email).Scan(&id)
+			if err != nil {
+				if err == sql.ErrNoRows {
+					log.Println("EMAIL NOT FOUND")
+					return
+				}
+				log.Println("ERROR: ", err)
+				return
+			}
+	
+			err = database.QueryRow("SELECT expires_at, used FROM password_token WHERE user_id = ?", id).Scan(&expires_at, &used)
+			if err != nil {
+
+				fmt.Println("EXPIRES AT: ", expires_at)
+				fmt.Println("USED: ", used)
+				if err == sql.ErrNoRows || used == true || time.Now().After(expires_at) {
+					w.Write([]byte("INVALID TOKEN"))
+					log.Println("INVALID TOKEN")
+					return
+
+				}
+				log.Println("ERROR: ", err)
+				return
+	
+			} else if err == nil {
+				teste = teste[:0]
+				w.Write([]byte("VALID TOKEN"))
+				log.Println("VALID TOKEN")
+
+			}
+		}
+	}
 }
 
 
