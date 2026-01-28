@@ -9,7 +9,7 @@
     
     <div id="passwordForReset">
 
-        <form action="http://127.0.0.1:8000/reset/password" method="post" id="resetForm">
+        <form action="" method="post" id="resetForm">
             <input type="password" name="currentPassword" id="currentPassword" required placeholder="Your current password">
             <input type="password" name="newPassword" id="newPassword" required placeholder="Your new password">
             <input type="password" name="confirmPassword" id="confirmPassword" required placeholder="Confirm the new password">
@@ -47,19 +47,11 @@
             let resetForm = document.getElementById("resetForm");
             let confirmPassword = document.getElementById("confirmPassword");
 
-            leaveResetPassword.addEventListener("click", () => {
-                passwordForReset.style.display = 'none';
-                currentPassword.value = '';
-                newPassword.value = '';
-                confirmPassword.value = '';
-            });
 
             resetForm.addEventListener("submit", async (form) => {
 
                 form.preventDefault();
                 const formData = new FormData(form.target)
-
-                const token = new URLSearchParams(window.location.search).get('token');
 
                 try {
 
@@ -69,8 +61,8 @@
                     })
 
                     const status = fetchResetPassword.status
-                    const message = await fetchResetPassword.text()
-                    alert(`Status: ${status} Message: ${message}`)
+                    const message = await fetchResetPassword.text();
+                    alert(`Status: ${status} Message: ${message}`);
 
                     if (status === 200 && message === "VALID PASSWORD") {
                         passwordResetSuccessfully.style.display = 'block';
@@ -81,19 +73,15 @@
 
                     } else if (status === 400 && message === "INCORRECT PASSWORD") {
                         wrongPassword.style.display = 'block';
-                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
 
                     } else if (status === 400 && message === "THE PASSWORD ARE THE SAME") {
                         theSamePassword.style.display = 'block';
-                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
 
                     } else if (status === 400 && message === "SHORT PASSWORD") {
                         shortPassword.style.display = 'block';
-                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
 
                     } else if (status === 400 && message === "PASSWORD CONFIRMATION IS WRONG") {
                         passwordConfirmationIsWrong.style.display = 'block';
-                        teste("lastAttemptToChangeThePassword", lastAttemptToChangeThePassword)
 
                     }
 
