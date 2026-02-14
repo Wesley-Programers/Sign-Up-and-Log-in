@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        body.light {
+            background: rgb(255, 255, 255);
+            color: black;
+        }
+
+        body.dark {
+            background: rgb(0, 0, 0);
+            color: rgb(255, 255, 255);
+        }
+    </style>
+</head>
+<body>
+    <div id="theme">
+
+        <form action="" id="formThemes">
+            <label for=""><input type="radio" name="theme" id="darkTheme" value="dark"></label>
+            <span id="dark">Dark</span>
+            <label for=""><input type="radio" name="theme" id="lightTheme" value="light"></label>
+            <span id="light">Light</span>
+
+        </form>
+    </div>
+
+    <script>
+        document.querySelectorAll('input[name="theme"]').forEach((input) => {
+
+            input.addEventListener("change", (event) => {
+                const theme = event.target.value;
+                console.log("Escolhido: ", theme);
+
+                body.classList.remove("light", "dark");
+                body.classList.add(theme);
+
+                localStorage.setItem("currentTheme", theme);
+                setTimeout(() => {
+                    window.location.href = window.location.href = '../HTML/mainAccount.html';
+                }, 300);
+            });
+        });
+
+        const getTheme = localStorage.getItem("currentTheme");
+        const body = document.body;
+
+        window.addEventListener("DOMContentLoaded", () => {
+            if (getTheme) {
+                body.classList.add(getTheme);
+                const currentTheme = document.querySelector(`input[name="theme"][value="${getTheme}"]`);
+                if (currentTheme) {
+                    currentTheme.checked = true;
+                } else {
+                    body.classList.add("light");
+                };
+            };
+        });
+    </script>
+</body>
+</html>

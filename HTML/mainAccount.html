@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        #setting, #logOut {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    
+    <div id="main">
+
+        <p id="welcome">HELLO, HOW'S IT GOING?</p>
+        <span id="setting">Settings</span>
+
+    </div>
+    
+    
+    <script>
+        let settings = document.getElementById("setting");
+        
+
+        settings.addEventListener("click", () => {
+            setTimeout(() => {
+                window.location.href = './settings.html'
+            }, 500);
+        });
+
+    </script>
+</body>
+</html>

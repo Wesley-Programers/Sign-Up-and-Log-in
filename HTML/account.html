@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        #confirming, #confirmValid, #confirmInvalid {
+            display: none;
+        }
+
+        #logOut, #confirmValid, #confirmInvalid {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div>
+        <span id="confirming">Are you sure you want to log out of the account?</span>
+        <span id="confirmValid">Yes</span>
+        <span id="confirmInvalid">No</span>
+    </div>
+
+    <span id="logOut">Log out</span>
+    
+    <script>
+        let logOut = document.getElementById("logOut");
+        let confirming = document.getElementById("confirming");
+        let confirmValid = document.getElementById("confirmValid");
+        let confirmInvalid = document.getElementById("confirmInvalid");
+
+        logOut.addEventListener("click", () => {
+
+            confirming.style.display = 'block';
+            confirmValid.style.display = 'block';
+            confirmInvalid.style.display = 'block';
+
+            confirmValid.addEventListener("click", () => {
+
+                try {
+
+                    fetch("http://127.0.0.1:8000/logout")
+
+                    alert("EVERYTHING ALRIGHT");
+                    setTimeout(() => {
+                        window.location.href = '../HTML/logIn.html';
+                    }, 1000);
+
+                } catch ( error ) {
+                    console.error("ERROR: ", error);
+                }
+
+            });
+
+            confirmInvalid.addEventListener("click", () => {
+                confirming.style.display = 'none';
+                confirmValid.style.display = 'none';
+                confirmInvalid.style.display = 'none';
+            });
+
+        }); 
+    </script>
+</body>
+</html>

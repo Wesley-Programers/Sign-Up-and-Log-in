@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign in</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+        }
+
+        #forgotPassword, #dontHaveAccount, #leave {
+            cursor: pointer;
+        }
+
+        #reset {
+            border: 2px solid white;
+            display: none;
+        }
+
+        .invisible {
+            display: none;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div>
+        <p id="welcomeBack">WELCOME BACK</p>
+        <p id="signInTitle">LOG IN</p>
+        <p id="forgotPassword">Forgot the password?</p>
+        <p id="dontHaveAccount">Don't have an account?</p>
+
+        <p id="incorrectName" class="invisible">Incorrect name</p>
+        <p id="incorrectEmail" class="invisible">Incorrect email</p>
+        <p id="incorrectPassword" class="invisible">Incorrect password</p>
+
+        <span id="link"></span>
+        
+
+        <form id="formLogIn" action="http://127.0.0.1:8000/login" method="post">
+
+            <div id="div-sign-in">
+                <input type="text" id="inputNameEmail" required name="nameEmail" placeholder="Name or Email">
+                <input type="password" id="inputPassword" required name="passwordLog" placeholder="Password">
+
+                <button id="signInButton" type="submit">Log in</button>
+            </div>
+
+        </form>
+
+
+        <div id="reset">
+
+            <div id="emailForReset">
+                <span id="email">Enter your account email to reset your password</span>
+                <span id="leave">LEAVE</span>
+
+                <form action="http://127.0.0.1:8000/reset" method="post" id="formEmailForResetPassword">
+                    <input type="text" required placeholder="Your email" name="email" id="inputEmailForResetPassword">
+
+                    <button type="submit">SEND</button>
+                </form>
+            </div>
+
+        </div>
+
+        <div id="alerts">
+            <span id="invalidEmail" class="invisible">Invalid email</span>
+        </div>
+
+    </div>
+
+    <script src="../Javascript/login.js"></script>
+    
+</body>
+</html>
