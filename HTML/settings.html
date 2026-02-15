@@ -22,12 +22,6 @@
             cursor: pointer;
         }
 
-        #language {
-            position: absolute;
-            top: 27%;
-            cursor: pointer;
-        }
-
         #security {
             position: absolute;
             top: 31%;
@@ -40,25 +34,17 @@
     <div id="div-settings">
         <span id="account">Account</span>
         <span id="theme">Theme</span>
-        <span id="language">Language</span>
         <span id="security">Security</span>
     </div>
 
     <script>
         let theme = document.getElementById("theme");
-        let language = document.getElementById("language");
         let security = document.getElementById("security");
         let account = document.getElementById("account");
 
         theme.addEventListener("click", () => {
             setTimeout(() => {
                 window.location.href = '../HTML/theme.html'
-            }, 500);
-        });
-
-        language.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = '../HTML/language.html'
             }, 500);
         });
 

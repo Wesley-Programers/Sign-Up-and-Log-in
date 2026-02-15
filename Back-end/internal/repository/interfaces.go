@@ -23,3 +23,7 @@ type Request interface {
 type ResetPassword interface {
 	ResetPassword(currentPassword, newPassword, confirmNewPassword string) (error, string)
 }
+
+type DeleteAccount interface {
+	DeleteAccount(email, password string) error
+}

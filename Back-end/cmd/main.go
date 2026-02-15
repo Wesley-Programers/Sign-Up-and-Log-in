@@ -15,9 +15,9 @@ func main() {
 	database := database.Connect()
 	defer database.Close()
 	
-	repo := &repository.MysqlStruct{}
-	serviceSigUp := &service.User{Repository: repo}
-	handler := &handlers.Handler{Service: serviceSigUp}
+	repositoryRegister := &repository.Register{}
+	serviceRegister := &service.User{Repository: repositoryRegister}
+	handlerRegister := &handlers.Handler{Service: serviceRegister}
 
 	repositoryLogin := &repository.VerifyLoginStruct{}
 	serviceLogin := &service.VerifyLogin{Repository: repositoryLogin}
@@ -39,14 +39,17 @@ func main() {
 	serviceResetPassword := &service.ResetPassword{Repository: repositoryResetPassword}
 	handlerResetPassword := &handlers.ResetPasswordHandler{Service: serviceResetPassword}
 
-	http.HandleFunc("/sign", handler.NewSignUpHandler)
+	repositoryDeleteAccount := &repository.DeleteAccountStruct{}
+	serviceDeleteAccount := &service.DeleteAccount{Repository: repositoryDeleteAccount}
+	handlerDeleteAccount := &handlers.DeleteAccountHandler{Service: serviceDeleteAccount}
+
+	http.HandleFunc("/sign", handlerRegister.NewSignUpHandler)
 	http.HandleFunc("/login", handlerLogin.NewHandlerLogin)
 
 	http.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
 	http.HandleFunc("/email", handlerChangeEmail.ChangeEmailHandler)
 
-	http.HandleFunc("/logout", handlers.LogoutHandler(database))
-	http.HandleFunc("/delete", handlers.HandlerDeleteAccount(database))
+	http.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
 	http.HandleFunc("/reset", handlerRequest.RequestHandler)
 	http.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)

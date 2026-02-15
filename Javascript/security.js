@@ -19,8 +19,6 @@ let leaveChangeName = document.getElementById("leaveChangeName");
 let leaveChangeEmail = document.getElementById("leaveChangeEmail");
 let leaveDeleteAccount = document.getElementById("leaveDeleteAccount");
 
-let clear = document.getElementById("clear");
-
 let deleteAccountForm = document.getElementById("deleteAccountForm");
 let deleteSession = document.getElementById("deleteSession");
 let deleteAccount = document.getElementById("deleteAccount");
@@ -66,19 +64,6 @@ leaveChangeEmail.addEventListener("click", () => {
     inputCurrentPassword.value = '';
 
     changeEmailWindow.style.display = 'none';
-});
-
-clear.addEventListener("click", () => {      
-    localStorage.removeItem("logs");
-    localStorage.removeItem("lastEmail");
-    localStorage.removeItem("lastName");
-    localStorage.removeItem("lastLogin");
-    localStorage.removeItem("lastAttemptToChangeTheEmail");
-    localStorage.removeItem("lastAttemptToDeleteTheAccount");
-    localStorage.removeItem("lastAttemptToChangeThePassword");
-
-    window.location.reload();
-
 });
 
 deleteAccount.addEventListener("click", () => {

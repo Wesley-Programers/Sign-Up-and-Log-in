@@ -2,27 +2,25 @@ package repository
 
 import (
 	"errors"
-	"database/sql"
 	"log"
-	// "time"
-	// "context"
 
 	"index/internal/database"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
-type MysqlStruct struct{}
+type Register struct{}
 type VerifyLoginStruct struct{}
 type ChangeNameStruct struct{}
 type ChangeEmailStruct struct{}
 type RequestStruct struct{}
 type ResetPasswordStruct struct{}
+type DeleteAccountStruct struct{}
 
 var test = make([]string, 0, 1)
 
 
-func (m *MysqlStruct) NewMysqlInsert(name, email, password string) error {
+func (register *Register) NewMysqlInsert(name, email, password string) error {
 	query := "INSERT INTO users (name, email, password) VALUES (?, ?, ?);"
 
 	_, erroInsert := database.Connect().Exec(query, name, email, password)
@@ -30,7 +28,7 @@ func (m *MysqlStruct) NewMysqlInsert(name, email, password string) error {
 }
 
 
-func (v *VerifyLoginStruct) NewVerifyLogin(name, email, password string) error {
+func (verifyLogin *VerifyLoginStruct) NewVerifyLogin(name, email, password string) error {
 	query := "SELECT password FROM users WHERE name = ? OR email = ?"
 
 	var passwordHash string
@@ -50,17 +48,20 @@ func (v *VerifyLoginStruct) NewVerifyLogin(name, email, password string) error {
 
 func (changeName *ChangeNameStruct) ChangeName(currentName, newName string) error {
 	var exist bool
+
 	query := "SELECT EXISTS(SELECT 1 FROM users WHERE name = ?)"
 	queryUpdateName, err := database.Connect().Prepare("UPDATE users SET name = ? WHERE name = ?")
 
 	err = database.Connect().QueryRow(query, currentName).Scan(&exist)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err
 	}
 
 	if newName != "" && exist && currentName != newName {
 		_, err := queryUpdateName.Exec(newName, currentName)
 		if err != nil {
+			log.Println("ERROR: ", err)
 			return err
 		}
 
@@ -84,16 +85,19 @@ func (changeEmail *ChangeEmailStruct) ChangeEmail(currentEmail, newEmail, confir
 	queryPassword := "SELECT password FROM users WHERE email = ?"
 	queryUpdateEmail, err := database.Connect().Prepare("UPDATE users SET email = ? WHERE email = ?")
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err
 	}
 
 	err = database.Connect().QueryRow(query, currentEmail).Scan(&exist)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err
 	}
 
 	err = database.Connect().QueryRow(queryPassword, currentEmail).Scan(&verifyPassword)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err
 	}
 
@@ -101,6 +105,7 @@ func (changeEmail *ChangeEmailStruct) ChangeEmail(currentEmail, newEmail, confir
 	if exist && newEmail == confirmNewEmail && passwordHash == nil && newEmail != currentEmail {
 		_, err = queryUpdateEmail.Exec(newEmail, currentEmail)
 		if err != nil {
+			log.Println("ERROR: ", err)
 			return err
 		}
 		return nil
@@ -126,6 +131,7 @@ func (request *RequestStruct) Request(email string) (error, int) {
 	query := "SELECT id, email FROM users WHERE email = ?"
 	err := database.Connect().QueryRow(query, email).Scan(&id, &verify)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err, 0
 	}
 
@@ -135,8 +141,8 @@ func (request *RequestStruct) Request(email string) (error, int) {
 	}
 
 	return nil, 0
-
 }
+
 
 func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPassword, confirmNewPassword string) (error, string) {
 	var id int
@@ -149,12 +155,14 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 	querySelect := "SELECT id, password FROM users WHERE email = ?"
 	err = database.Connect().QueryRow(querySelect, email).Scan(&id, &verify)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err, ""
 	}
 
 	queryToken := "SELECT token FROM reset_password WHERE user_id = ?"
 	err = database.Connect().QueryRow(queryToken, id).Scan(&token)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err, ""
 	}
 
@@ -166,11 +174,13 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 	queryReset := "SELECT id, user_id, expires_at, used FROM reset_password WHERE token = ?"
 	err = database.Connect().QueryRow(queryReset, token).Scan(&idToken, user_id, expires_at, used)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err, ""
 	}
 
-	allowed, err := LimitOfAttempts(database.Connect(), email)
+	allowed, err := LimitOfAttempts(email)
 	if err != nil {
+		log.Println("ERROR: ", err)
 		return err, ""
 	}
 
@@ -179,7 +189,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 	}
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
-	if passwordHash == nil {
+	if passwordHash == nil && !used {
 		// ctx, cancel := context.WithCancel(context.Background())
 		// go func(ctx context.Context) {
 		// 	select {
@@ -187,7 +197,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 		// 		test = test[:0]
 
 		// 	case <-ctx.Done():
-		// 		log.Println("EMPTY EMAIL GOROTINE STOPPED")
+		// 		log.Println("")
 		// 		return
 		// 	}
 
@@ -201,9 +211,47 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 }
 
 
-func RemoveExpiredToken(database *sql.DB) {
+func (deleteAccount *DeleteAccountStruct) DeleteAccount(email, password string) error {
+	var verifyEmail bool
+	var verifyPassword string
 
-	_, queryError := database.Exec("DELETE FROM password_token WHERE expires_at < NOW()")
+	query := "DELETE FROM users WHERE password = ?"
+	queryEmail := "SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)"
+	queryPassword := "SELECT password FROM users WHERE email = ?"
+
+	err := database.Connect().QueryRow(queryEmail, email).Scan(&verifyEmail)
+	if err != nil {
+		log.Println("ERROR: ", err)
+		return err
+	}
+
+	err = database.Connect().QueryRow(queryPassword, email).Scan(&verifyPassword)
+	if err != nil {
+		log.Println("ERROR: ", err)
+		return err
+	}
+
+	passwordHash := bcrypt.CompareHashAndPassword([]byte(verifyPassword), []byte(password))
+	if passwordHash == nil && verifyEmail {
+		_, err = database.Connect().Exec(query, passwordHash)
+		if err != nil {
+			log.Println("ERROR: ", err)
+			return err
+		}
+
+		return nil
+
+	} else {
+		log.Println("ERROR: ", passwordHash)
+		return passwordHash
+	}
+
+}
+
+
+func RemoveExpiredToken() {
+
+	_, queryError := database.Connect().Exec("DELETE FROM password_token WHERE expires_at < NOW()")
 	if queryError != nil {
 		log.Println("ERROR: ", queryError)
 		return
@@ -214,18 +262,35 @@ func RemoveExpiredToken(database *sql.DB) {
 }
 
 
-func Testing(hash, email string) error {
-	// _, err := database.Connect().Prepare("UPDATE users SET password = ? WHERE email = ?")
-	// if err != nil {
-	// 	return err
-	// }
+func Testing(hash, email string) (error, int) {
+	var id int
 
 	query, err := database.Connect().Prepare("UPDATE users SET password = ? WHERE email = ?")
+	if err != nil {
+		return err, 0
+	}
+
+	_, err = query.Exec(hash, email)
+	if err != nil {
+		return err, 0
+	}
+
+	err = database.Connect().QueryRow("SELECT id WHERE email = ?", email).Scan(&id)
+	if err != nil {
+		return err, 0
+	}
+
+	return nil, id
+}
+
+
+func TokenUsed(id int) error {
+	query, err := database.Connect().Prepare("UPDATE reset_password SET used = true WHERE user_id = ?")
 	if err != nil {
 		return err
 	}
 
-	_, err = query.Exec(hash, email)
+	_, err = query.Exec()
 	if err != nil {
 		return err
 	}
@@ -234,17 +299,17 @@ func Testing(hash, email string) error {
 }
 
 
-func LimitOfAttempts(database *sql.DB, email string) (bool, error) {
+func LimitOfAttempts(email string) (bool, error) {
 
 	var emailCount int
 
-	err := database.QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ?", email).Scan(&emailCount)
+	err := database.Connect().QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ?", email).Scan(&emailCount)
 	if err != nil {
 		return false, err
 	}
 
-	if emailCount >= 4 {
-		return false, nil
+	if emailCount >= 10 {
+		return false, errors.New("ERROR")
 	}
 
 	return true, nil
@@ -252,7 +317,7 @@ func LimitOfAttempts(database *sql.DB, email string) (bool, error) {
 }
 
 
-func AttemptLogs(database *sql.DB, email string) error {
-	_, err := database.Exec("INSERT INTO attempts(email) VALUES(?)", email)
+func AttemptLogs(email string) error {
+	_, err := database.Connect().Exec("INSERT INTO attempts(email) VALUES(?)", email)
 	return err
 }

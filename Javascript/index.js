@@ -10,14 +10,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let form = document.getElementById("form-sign-up");
 
 
-    //     // FormData no JS → usa multipart/form-data
-    //     // Go precisa usar → r.ParseMultipartForm(...)
-    //     // r.FormValue(...) ainda funciona normalmente depois disso
-    //     // Sempre coloque e.preventDefault() no JS
-    //     // E nunca esqueça dos name="" nos inputs
-    //     // dia 24/09 após mais de um mês tentando fazer isso finalmente consegui
-
-
     form.addEventListener("submit", async (form) => {
         form.preventDefault();
 

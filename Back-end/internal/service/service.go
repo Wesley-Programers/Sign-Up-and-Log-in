@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct{
+type User struct {
 	Repository repository.User
 }
 
@@ -42,10 +42,14 @@ type ResetPassword struct {
 	Repository repository.ResetPassword
 }
 
+type DeleteAccount struct {
+	Repository repository.DeleteAccount
+}
+
 var masterKey = []byte(os.Getenv("KEY"))
 
 
-func (u *User) SaveData(name, email, password string) error {
+func (user *User) SaveData(name, email, password string) error {
 	validPassword, message := VerifyPassword(password)
 	if !validPassword {
 		return errors.New(message)
@@ -56,13 +60,12 @@ func (u *User) SaveData(name, email, password string) error {
 		return err
 	}
 
-	return u.Repository.NewMysqlInsert(name, email, string(hash))
+	return user.Repository.NewMysqlInsert(name, email, string(hash))
 }
 
 
-func (v *VerifyLogin) VerifyLoginFunction(name, email, password string) error {
-	return v.Repository.NewVerifyLogin(name, email, password)
-
+func (verifyLogin *VerifyLogin) VerifyLoginFunction(name, email, password string) error {
+	return verifyLogin.Repository.NewVerifyLogin(name, email, password)
 }
 
 
@@ -110,15 +113,24 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPas
 		return err
 	}
 
-
 	err, email := resetPasword.Repository.ResetPassword(currentPassword, newPassword, confirmNewPassword)
-	err = repository.Testing(hash, email)
+	err, id := repository.Testing(hash, email)
 	if err != nil {
 		return err
 	}
 
 	StartToRemoverExpiredTokens()
+	err = repository.TokenUsed(id)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+
+func (delete *DeleteAccount) DeleteAccountFunction(email, password string) error {
+	return delete.Repository.DeleteAccount(email, password)
 }
 
 
@@ -213,7 +225,7 @@ func StartToRemoverExpiredTokens() {
 
 	go func() {
 		for range ticker.C {
-			repository.RemoveExpiredToken(database.Connect())
+			repository.RemoveExpiredToken()
 		}
 	}()
 
