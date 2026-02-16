@@ -114,14 +114,19 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPas
 	}
 
 	err, email := resetPasword.Repository.ResetPassword(currentPassword, newPassword, confirmNewPassword)
-	err, id := repository.Testing(hash, email)
 	if err != nil {
+		_, err = repository.LimitOfAttempts(email)
+		if err != nil {
+			return err
+		}
 		return err
 	}
-
-	StartToRemoverExpiredTokens()
-	err = repository.TokenUsed(id)
+	err = repository.UpdatePassword(hash, email)
 	if err != nil {
+		_, err = repository.LimitOfAttempts(email)
+		if err != nil {
+			return err
+		}
 		return err
 	}
 
@@ -220,13 +225,10 @@ func GenerateLink(token string) string {
 
 
 func StartToRemoverExpiredTokens() {
-
 	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
 
-	go func() {
-		for range ticker.C {
-			repository.RemoveExpiredToken()
-		}
-	}()
-
+	for range ticker.C {
+		repository.RemoveExpiredToken()
+	}
 }
