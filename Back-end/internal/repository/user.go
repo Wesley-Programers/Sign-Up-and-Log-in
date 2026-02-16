@@ -1,13 +1,18 @@
 package repository
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"log"
+	"time"
 
 	"index/internal/database"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+var databaseVariable *sql.DB = database.Connect()
 
 type Register struct{}
 type VerifyLoginStruct struct{}
@@ -249,48 +254,54 @@ func (deleteAccount *DeleteAccountStruct) DeleteAccount(email, password string) 
 }
 
 
-func RemoveExpiredToken() {
+func RemoveExpiredToken() error {
 
-	_, queryError := database.Connect().Exec("DELETE FROM password_token WHERE expires_at < NOW()")
-	if queryError != nil {
-		log.Println("ERROR: ", queryError)
-		return
-	}
+	context, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	log.Println("TOKENS REMOVED")
-
-}
-
-
-func Testing(hash, email string) (error, int) {
-	var id int
-
-	query, err := database.Connect().Prepare("UPDATE users SET password = ? WHERE email = ?")
-	if err != nil {
-		return err, 0
-	}
-
-	_, err = query.Exec(hash, email)
-	if err != nil {
-		return err, 0
-	}
-
-	err = database.Connect().QueryRow("SELECT id WHERE email = ?", email).Scan(&id)
-	if err != nil {
-		return err, 0
-	}
-
-	return nil, id
-}
-
-
-func TokenUsed(id int) error {
-	query, err := database.Connect().Prepare("UPDATE reset_password SET used = true WHERE user_id = ?")
+	result, err := database.Connect().ExecContext(context, "DELETE FROM reset_password WHERE expires_at < NOW() OR used = TRUE")
 	if err != nil {
 		return err
 	}
 
-	_, err = query.Exec()
+	rows, _ := result.RowsAffected()
+	if rows > 0 {
+		log.Printf("REMOVED %d expired or used tokens", rows)
+	}
+
+	return nil
+}
+
+
+func UpdatePassword(hash, email string) error {
+	var id int
+	tx, err := databaseVariable.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = tx.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&id)
+	if err != nil {
+		return err
+	}
+
+	result, err := tx.Exec("UPDATE users SET password = ? WHERE email = ?", hash, email)
+	if err != nil {
+		return err
+	}
+
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		return err
+	}
+
+	_, err = tx.Exec("UPDATE reset_password SET used = true WHERE user_id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
@@ -300,24 +311,26 @@ func TokenUsed(id int) error {
 
 
 func LimitOfAttempts(email string) (bool, error) {
-
 	var emailCount int
 
-	err := database.Connect().QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ?", email).Scan(&emailCount)
+	_, err := database.Connect().Exec("DELETE FROM attempts WHERE attempted_at < NOW() - INTERVAL 24 HOUR")
 	if err != nil {
 		return false, err
 	}
 
-	if emailCount >= 10 {
+	err = database.Connect().QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&emailCount)
+	if err != nil {
+		return false, err
+	}
+
+	if emailCount >= 5 {
 		return false, errors.New("ERROR")
 	}
 
+	_, err = database.Connect().Exec("INSERT INTO attempts (email, attempted_at) VALUES (?, NOW())", email)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
-
-}
-
-
-func AttemptLogs(email string) error {
-	_, err := database.Connect().Exec("INSERT INTO attempts(email) VALUES(?)", email)
-	return err
 }
