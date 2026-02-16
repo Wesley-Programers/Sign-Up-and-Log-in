@@ -1,14 +1,14 @@
 package handlers
 
 import (
-	"fmt"
-	"database/sql"
 	"log"
 	"net/http"
-	"time"
-
+	
+	// "fmt"
+	// "time"
+	// "database/sql"
+	
 	"index/internal/service"
-
 	"github.com/gorilla/sessions"
 	// "golang.org/x/crypto/bcrypt"
 )
@@ -71,7 +71,6 @@ func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request)
 		} else {
 			w.WriteHeader(http.StatusCreated)
 			w.Write([]byte("VALID DATA"))
-	
 		}
 	
 		log.Println("SUCCESS")
@@ -80,7 +79,6 @@ func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request)
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -110,7 +108,6 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-	
 		}
 	
 		log.Println("SUCCESS")
@@ -119,7 +116,6 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -146,7 +142,6 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-	
 		}
 	
 		log.Println("SUCCESS")
@@ -155,7 +150,6 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -186,7 +180,6 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
-	
 		}
 	
 		log.Println("SUCCESS")
@@ -195,7 +188,6 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -231,7 +223,6 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -271,7 +262,6 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
-
 }
 
 
@@ -308,73 +298,5 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
-	}
-}
-
-
-func ValidTokenHandler(database *sql.DB) http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-
-
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		log.SetFlags(log.Lshortfile)
-
-		if r.Method == http.MethodPost {
-
-			var id int
-			var expires_at string
-			var used bool
-	
-			email := teste[0]
-			err := database.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&id)
-			if err != nil {
-				if err == sql.ErrNoRows {
-					log.Println("EMAIL NOT FOUND")
-					return
-				}
-				log.Println("ERROR: ", err)
-				return
-			}
-	
-			err = database.QueryRow("SELECT expires_at, used FROM password_token WHERE user_id = ?", id).Scan(&expires_at, &used)
-			fmt.Println("EXPIRES AT: ", expires_at)
-
-			layout := "2006-01-02 15:04:05"
-			newExpiresAt, timeParseError := time.Parse(layout, expires_at)
-			if timeParseError != nil {
-				log.Println("ERROR: ", err)
-				return
-			}
-
-			fmt.Println("NEW EXPIRES AT AGAIN: ", newExpiresAt)
-
-			if err != nil {
-
-				if err == sql.ErrNoRows || used == true || time.Now().After(newExpiresAt) {
-					w.Write([]byte("INVALID TOKEN"))
-					log.Println("INVALID TOKEN")
-					return
-
-				}
-				log.Println("ERROR: ", err)
-				return
-	
-			} else {
-				w.Write([]byte("VALID TOKEN"))
-				time.Sleep(1000 * time.Millisecond)
-				fmt.Println("USED: ", used)
-				fmt.Println("VALID TOKEN")
-
-			}
-		}
 	}
 }
