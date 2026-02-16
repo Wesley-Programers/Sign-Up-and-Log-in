@@ -14,6 +14,8 @@ import (
 func main() {
 	database := database.Connect()
 	defer database.Close()
+
+	go service.StartToRemoverExpiredTokens()
 	
 	repositoryRegister := &repository.Register{}
 	serviceRegister := &service.User{Repository: repositoryRegister}
@@ -53,7 +55,6 @@ func main() {
 
 	http.HandleFunc("/reset", handlerRequest.RequestHandler)
 	http.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
-	http.HandleFunc("/reset/valid", handlers.ValidTokenHandler(database))
 	
 	fmt.Println("SERVER OPEN WITH GOLANG")
 	http.ListenAndServe("127.0.0.1:8000", nil)
