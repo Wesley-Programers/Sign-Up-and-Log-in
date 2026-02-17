@@ -26,18 +26,15 @@ var test = make([]string, 0, 1)
 
 
 func (register *Register) NewMysqlInsert(name, email, password string) error {
-	query := "INSERT INTO users (name, email, password) VALUES (?, ?, ?);"
-
-	_, erroInsert := database.Connect().Exec(query, name, email, password)
-	return erroInsert
+	_, err := database.Connect().Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", name, email, password)
+	return err
 }
 
 
 func (verifyLogin *VerifyLoginStruct) NewVerifyLogin(name, email, password string) error {
-	query := "SELECT password FROM users WHERE name = ? OR email = ?"
 
 	var passwordHash string
-	err := database.Connect().QueryRow(query, name, email).Scan(&passwordHash)
+	err := database.Connect().QueryRow("SELECT password FROM users WHERE name = ? OR email = ?", name, email).Scan(&passwordHash)
 	if err != nil {
 		return errors.New("WRONG EMAIL OR NAME")
 	}
@@ -54,23 +51,24 @@ func (verifyLogin *VerifyLoginStruct) NewVerifyLogin(name, email, password strin
 func (changeName *ChangeNameStruct) ChangeName(currentName, newName string) error {
 	var exist bool
 
-	query := "SELECT EXISTS(SELECT 1 FROM users WHERE name = ?)"
-	queryUpdateName, err := database.Connect().Prepare("UPDATE users SET name = ? WHERE name = ?")
+	tx, err := database.Connect().Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
-	err = database.Connect().QueryRow(query, currentName).Scan(&exist)
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE name = ?)", currentName).Scan(&exist)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 
 	if newName != "" && exist && currentName != newName {
-		_, err := queryUpdateName.Exec(newName, currentName)
+		_, err = tx.Exec("UPDATE users SET name = ? WHERE name = ?", newName, currentName)
 		if err != nil {
 			log.Println("ERROR: ", err)
 			return err
 		}
-
-		return nil
 
 	} else if !exist {
 		return errors.New("NAME DOES NOT EXIST")
@@ -79,41 +77,48 @@ func (changeName *ChangeNameStruct) ChangeName(currentName, newName string) erro
 	} else {
 		return errors.New("SOME ERROR")
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+	
 }
 
 
 func (changeEmail *ChangeEmailStruct) ChangeEmail(currentEmail, newEmail, confirmNewEmail, password string) error {
+	
+	tx, err := database.Connect().Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	
 	var exist bool
 	var verifyPassword string
 
-	query := "SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)"
-	queryPassword := "SELECT password FROM users WHERE email = ?"
-	queryUpdateEmail, err := database.Connect().Prepare("UPDATE users SET email = ? WHERE email = ?")
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)", currentEmail).Scan(&exist)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 
-	err = database.Connect().QueryRow(query, currentEmail).Scan(&exist)
-	if err != nil {
-		log.Println("ERROR: ", err)
-		return err
-	}
-
-	err = database.Connect().QueryRow(queryPassword, currentEmail).Scan(&verifyPassword)
+	err = tx.QueryRow("SELECT password FROM users WHERE email = ?", currentEmail).Scan(&verifyPassword)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verifyPassword), []byte(password))
+
 	if exist && newEmail == confirmNewEmail && passwordHash == nil && newEmail != currentEmail {
-		_, err = queryUpdateEmail.Exec(newEmail, currentEmail)
+		_, err = tx.Exec("UPDATE users SET email = ? WHERE email = ?", newEmail, currentEmail)
 		if err != nil {
 			log.Println("ERROR: ", err)
 			return err
 		}
-		return nil
 
 	} else if !exist {
 		return errors.New("EMAIL DOES NOT EXIST")
@@ -126,6 +131,13 @@ func (changeEmail *ChangeEmailStruct) ChangeEmail(currentEmail, newEmail, confir
 	} else {
 		return errors.New("SOME ERROR")
 	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 
@@ -133,8 +145,7 @@ func (request *RequestStruct) Request(email string) (error, int) {
 	var id int
 	var verify string
 
-	query := "SELECT id, email FROM users WHERE email = ?"
-	err := database.Connect().QueryRow(query, email).Scan(&id, &verify)
+	err := database.Connect().QueryRow("SELECT id, email WHERE users email = ?", email).Scan(&id, &verify)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, 0
@@ -154,18 +165,21 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 	var verify string
 	var token string
 
-	email := test[0]
-	var err error
+	tx, err := database.Connect().Begin()
+	if err != nil {
+		return err, ""
+	}
+	defer tx.Rollback()
 
-	querySelect := "SELECT id, password FROM users WHERE email = ?"
-	err = database.Connect().QueryRow(querySelect, email).Scan(&id, &verify)
+	email := test[0]
+
+	err = tx.QueryRow("SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, ""
 	}
 
-	queryToken := "SELECT token FROM reset_password WHERE user_id = ?"
-	err = database.Connect().QueryRow(queryToken, id).Scan(&token)
+	err = tx.QueryRow("SELECT token FROM reset_password WHERE user_id = ?", id).Scan(&token)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, ""
@@ -176,8 +190,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 	var expires_at string
 	var used bool
 
-	queryReset := "SELECT id, user_id, expires_at, used FROM reset_password WHERE token = ?"
-	err = database.Connect().QueryRow(queryReset, token).Scan(&idToken, user_id, expires_at, used)
+	err = tx.QueryRow("SELECT id, user_id, expires_at, used FROM reset_password WHERE token = ?", token).Scan(&idToken, user_id, expires_at, used)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, ""
@@ -195,62 +208,75 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
 	if passwordHash == nil && !used {
-		// ctx, cancel := context.WithCancel(context.Background())
-		// go func(ctx context.Context) {
-		// 	select {
-		// 	case <-time.After(20 *time.Second):
-		// 		test = test[:0]
+		ctx, cancel := context.WithCancel(context.Background())
+		go func(ctx context.Context) {
+			select {
+			case <-time.After(180 *time.Second):
+				test = test[:0]
 
-		// 	case <-ctx.Done():
-		// 		log.Println("")
-		// 		return
-		// 	}
+			case <-ctx.Done():
+				log.Println("")
+				return
+			}
 
-		// }(ctx)
+		}(ctx)
 		
-		// cancel()
+		cancel()
 		return nil, email
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		return err, ""
+	}
 	return nil, ""
 }
 
 
 func (deleteAccount *DeleteAccountStruct) DeleteAccount(email, password string) error {
+	
+	tx, err := database.Connect().Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
 	var verifyEmail bool
 	var verifyPassword string
 
-	query := "DELETE FROM users WHERE password = ?"
-	queryEmail := "SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)"
-	queryPassword := "SELECT password FROM users WHERE email = ?"
-
-	err := database.Connect().QueryRow(queryEmail, email).Scan(&verifyEmail)
+	err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)", email).Scan(&verifyEmail)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 
-	err = database.Connect().QueryRow(queryPassword, email).Scan(&verifyPassword)
+	err = tx.QueryRow("SELECT password FROM users WHERE = ?", email).Scan(&verifyPassword)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err
 	}
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verifyPassword), []byte(password))
+
 	if passwordHash == nil && verifyEmail {
-		_, err = database.Connect().Exec(query, passwordHash)
+		_, err = tx.Exec("DELETE FROM users WHERE password = ?", passwordHash)
 		if err != nil {
 			log.Println("ERROR: ", err)
 			return err
 		}
-
-		return nil
 
 	} else {
 		log.Println("ERROR: ", passwordHash)
 		return passwordHash
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		log.Println("ERROR: ", err)
+		return err
+	}
+
+	return nil
 }
 
 
@@ -286,13 +312,8 @@ func UpdatePassword(hash, email string) error {
 		return err
 	}
 
-	result, err := tx.Exec("UPDATE users SET password = ? WHERE email = ?", hash, email)
+	_, err = tx.Exec("UPDATE users SET password = ? WHERE email = ?", hash, email)
 	if err != nil {
-		return err
-	}
-
-	rows, _ := result.RowsAffected()
-	if rows == 0 {
 		return err
 	}
 
@@ -313,12 +334,18 @@ func UpdatePassword(hash, email string) error {
 func LimitOfAttempts(email string) (bool, error) {
 	var emailCount int
 
-	_, err := database.Connect().Exec("DELETE FROM attempts WHERE attempted_at < NOW() - INTERVAL 24 HOUR")
+	tx, err := database.Connect().Begin()
+	if err != nil {
+		return false, err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM attempts WHERE attempted_at < NOW() - INTERVAL 24 HOUR")
 	if err != nil {
 		return false, err
 	}
 
-	err = database.Connect().QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&emailCount)
+	err = tx.QueryRow("SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&emailCount)
 	if err != nil {
 		return false, err
 	}
@@ -327,10 +354,23 @@ func LimitOfAttempts(email string) (bool, error) {
 		return false, errors.New("ERROR")
 	}
 
-	_, err = database.Connect().Exec("INSERT INTO attempts (email, attempted_at) VALUES (?, NOW())", email)
+	_, err = tx.Exec("INSERT INTO attempts (email, attempted_at) VALUES (?, NOW())", email)
 	if err != nil {
 		return false, err
 	}
 
+	err = tx.Commit()
+	if err != nil {
+		return false, err
+	}
 	return true, nil
+}
+
+
+func InsertInto(userID int, token string, expiresAt time.Time) error {
+	_, err := database.Connect().Exec("INSERT INTO reset_password(user_id, token, expires_at) VALUES (?, ?,?)")
+	if err != nil {
+		return err
+	}
+	return nil
 }
