@@ -3,17 +3,12 @@ package service
 import (
 	"encoding/hex"
 	"errors"
-	"io"
-	"os"
 	"time"
 	"unicode"
 
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 
 	"index/internal/repository"
-	"index/internal/database"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -45,8 +40,6 @@ type ResetPassword struct {
 type DeleteAccount struct {
 	Repository repository.DeleteAccount
 }
-
-var masterKey = []byte(os.Getenv("KEY"))
 
 
 func (user *User) SaveData(name, email, password string) error {
@@ -90,7 +83,7 @@ func (request *Request) RequestFunction(email string) (error, string) {
 			return err, ""
 		}
 		expiresAt := time.Now().Add(10 *time.Minute)
-		_, err = database.Connect().Exec("INSERT INTO reset_password(user_id, token, expires_at) VALUES(?, ?, ?)", id, token, expiresAt)
+		err = repository.InsertInto(id, token, expiresAt)
 		if err != nil {
 			return err, ""
 		}
@@ -186,27 +179,6 @@ func VerifyPassword(password string) (bool, string) {
 func HashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
-}
-
-
-func Encrypt(text string) ([]byte, error) {
-	block, _ := aes.NewCipher(masterKey)
-	gcm, _ := cipher.NewGCM(block)
-	nonce := make([]byte, gcm.NonceSize())
-	io.ReadFull(rand.Reader, nonce)
-
-	return gcm.Seal(nonce, nonce, []byte(text), nil), nil
-}
-
-
-func Decrypt(cipherText []byte) (string, error) {
-	block, _ := aes.NewCipher(masterKey)
-	gcm, _ := cipher.NewGCM(block)
-	nonceSize := gcm.NonceSize()
-	nonce, actualCipher := cipherText[:nonceSize], cipherText[nonceSize:]
-	text, err := gcm.Open(nil, nonce, actualCipher, nil)
-
-	return string(text), err
 }
 
 
