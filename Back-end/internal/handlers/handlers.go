@@ -9,7 +9,8 @@ import (
 	// "database/sql"
 	
 	"index/internal/service"
-	"github.com/gorilla/sessions"
+
+	// "github.com/gorilla/sessions"
 	// "golang.org/x/crypto/bcrypt"
 )
 
@@ -41,9 +42,6 @@ type DeleteAccountHandler struct {
 	Service *service.DeleteAccount
 }
 
-var teste = make([]string, 0, 1)
-var store = sessions.NewCookieStore([]byte("KEY_SESSION"))
-// var masterKey = []byte(os.Getenv("KEY"))
 
 func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -71,9 +69,9 @@ func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request)
 		} else {
 			w.WriteHeader(http.StatusCreated)
 			w.Write([]byte("VALID DATA"))
+			log.Println("SUCCESS")
 		}
 	
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
@@ -103,6 +101,7 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
+			log.Println("SUCCESS")
 	
 		} else {
 			log.Println("ERROR: ", err)
@@ -110,8 +109,6 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	
-		log.Println("SUCCESS")
-
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
@@ -120,6 +117,7 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 
 
 func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r *http.Request) {
+	
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -137,14 +135,13 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
+			log.Println("SUCCESS")
 	
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-	
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
@@ -166,6 +163,7 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 	log.SetFlags(log.Lshortfile)
 
 	if r.Method == http.MethodPost {
+
 		currentEmail := r.FormValue("currentEmail")
 		newEmail := r.FormValue("newEmail")
 		confirmNewEmail := r.FormValue("confirmNewEmail")
@@ -175,14 +173,13 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
+			log.Println("SUCCESS")
 	
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-	
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
@@ -204,20 +201,20 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 	log.SetFlags(log.Lshortfile)
 
 	if r.Method == http.MethodPost {
+
 		email := r.FormValue("email")
 	
 		err, link := requestHandler.Service.RequestFunction(email)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(link))
+			log.Println("SUCCESS")
 	
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-	
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
@@ -230,7 +227,6 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	// w.Header().Set("Content-Type", "text/plain")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -249,14 +245,13 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
+			log.Println("SUCCESS")
 
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
@@ -286,14 +281,13 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID"))
+			log.Println("SUCCESS")
 
 		} else {
 			log.Println("ERROR")
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-		log.Println("SUCCESS")
 
 	} else {
 		log.Println("ERROR")
