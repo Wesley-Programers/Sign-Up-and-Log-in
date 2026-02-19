@@ -45,10 +45,10 @@ type DeleteAccountHandler struct {
 
 func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Content-Type: ", "application/json")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -82,6 +82,7 @@ func (handler *Handler) NewSignUpHandler(w http.ResponseWriter, r *http.Request)
 
 func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -118,6 +119,7 @@ func (login *LoginHandler) NewHandlerLogin(w http.ResponseWriter, r *http.Reques
 
 func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r *http.Request) {
 	
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -151,6 +153,8 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 
 
 func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -189,6 +193,8 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 
 
 func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -204,10 +210,9 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 		email := r.FormValue("email")
 	
-		err, link := requestHandler.Service.RequestFunction(email)
+		err := requestHandler.Service.RequestFunction(email)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(link))
 			log.Println("SUCCESS")
 	
 		} else {
@@ -224,6 +229,8 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 
 func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -261,6 +268,8 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 
 
 func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
