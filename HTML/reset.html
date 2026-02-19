@@ -71,19 +71,9 @@
                 form.preventDefault();
                 const formData = new FormData(form.target)
 
-                // const token = new URLSearchParams(window.location.search).get('token');
-
                 try {
 
-                    const fetchValidToken = await fetch("http://127.0.0.1:8000/reset/valid", {
-                        method: "POST",
-                    })
-
-                    const status = fetchVstatuslidToken.status
-                    const message = await fetchValidToken.text()
-                    alert(`Status: ${a} Message: ${message}`);
-
-                    if (status === 200 && message === "VALID TOKEN") {
+                    if (status === 200) {
 
                         const fetchResetPassword = await fetch("http://127.0.0.1:8000/reset/password", {
                             method: "POST",

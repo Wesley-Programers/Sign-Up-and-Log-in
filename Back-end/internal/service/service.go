@@ -7,6 +7,7 @@ import (
 	"unicode"
 
 	"crypto/rand"
+	"crypto/sha256"
 
 	"index/internal/repository"
 
@@ -72,24 +73,24 @@ func (changeEmail *ChangeEmail) ChangeEmailFunction(currentEmail, newEmail, conf
 }
 
 
-func (request *Request) RequestFunction(email string) (error, string) {
+func (request *Request) RequestFunction(email string) error {
 	err, id := request.Repository.Request(email)
 	if err != nil {
-		return err, ""
+		return err
 		
 	} else {
 		token, err := GenerateTokens()
 		if err != nil {
-			return err, ""
+			return err
 		}
-		expiresAt := time.Now().Add(10 *time.Minute)
-		err = repository.InsertInto(id, token, expiresAt)
+		expiresAt := time.Now().Add(10 * time.Minute)
+		tokenHah := tokenHash(token)
+		err = repository.InsertInto(id, tokenHah, expiresAt)
 		if err != nil {
-			return err, ""
+			return err
 		}
 
-		link := GenerateLink(token)
-		return nil, link
+		return nil
 
 	}
 }
@@ -191,11 +192,6 @@ func GenerateTokens() (string, error) {
 }
 
 
-func GenerateLink(token string) string {
-	return "http://127.0.0.1:5500/reset?token=" + token
-}
-
-
 func StartToRemoverExpiredTokens() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -203,4 +199,10 @@ func StartToRemoverExpiredTokens() {
 	for range ticker.C {
 		repository.RemoveExpiredToken()
 	}
+}
+
+
+func tokenHash(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }

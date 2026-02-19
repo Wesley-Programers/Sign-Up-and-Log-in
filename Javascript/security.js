@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchChangeName.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "NAME VALID") {
+            if (status === 200 && message === "VALID DATA") {
 
                 alert("EVERYTHING IS WORK");
                 window.location.reload();
@@ -137,7 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchChangeEmail.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "EVERYTHING VALID") {
+            if (status === 200 && message === "VALID DATA") {
                 alert("EVERYTHING OK");
                 window.location.reload();
 
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await deleteAccountFetch.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200 && message === "EVERYTHING VALID") {
+            if (status === 200 && message === "VALID DATA") {
 
             } else if (status === 400 && message === "INCORRECT PASSWORD") {
                 incorrectPasswordDeleteAccount.style.display = 'block';

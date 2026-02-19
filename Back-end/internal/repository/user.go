@@ -84,7 +84,6 @@ func (changeName *ChangeNameStruct) ChangeName(currentName, newName string) erro
 	}
 
 	return nil
-	
 }
 
 
@@ -145,7 +144,7 @@ func (request *RequestStruct) Request(email string) (error, int) {
 	var id int
 	var verify string
 
-	err := database.Connect().QueryRow("SELECT id, email WHERE users email = ?", email).Scan(&id, &verify)
+	err := database.Connect().QueryRow("SELECT id, email FROM users WHERE email = ?", email).Scan(&id, &verify)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, 0
@@ -368,7 +367,7 @@ func LimitOfAttempts(email string) (bool, error) {
 
 
 func InsertInto(userID int, token string, expiresAt time.Time) error {
-	_, err := database.Connect().Exec("INSERT INTO reset_password(user_id, token, expires_at) VALUES (?, ?,?)")
+	_, err := database.Connect().Exec("INSERT INTO reset_password (user_id, token, expires_at) VALUES (?, ?, ?)", userID, token, expiresAt)
 	if err != nil {
 		return err
 	}

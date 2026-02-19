@@ -104,20 +104,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const status = resetFetch.status
             const message = await resetFetch.text()
             alert(`Status: ${status} Message: ${message}`);
-            
-            const someone = message.split("VALID EMAIL");
-            alert(someone);
-
-            const anotherTest = message.split("http");
-            // alert(anotherTest[0]);
 
             if (status === 200) {
-                link.innerHTML = someone
-
-                link.addEventListener("click", () => {
-                    link.style.cursor = 'pointer';
-                    window.location.href = '../HTML/reset.html';
-                });
 
             } else if (status === 400 && anotherTest === "INVALID EMAIL") {
                 alert("INVALID EMAIL");
