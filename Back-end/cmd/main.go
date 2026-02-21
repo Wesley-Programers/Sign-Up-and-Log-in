@@ -16,10 +16,11 @@ func main() {
 	defer database.Close()
 
 	go service.StartToRemoverExpiredTokens()
+	mux := http.NewServeMux()
 	
-	repositoryRegister := &repository.Register{}
-	serviceRegister := &service.User{Repository: repositoryRegister}
-	handlerRegister := &handlers.Handler{Service: serviceRegister}
+	repositoryRegister := repository.NewRegisterStruct(database)
+	serviceRegister := service.NewUserStruct(repositoryRegister)
+	handlerRegister := handlers.NewRegisterHanlder(serviceRegister)
 
 	repositoryLogin := &repository.VerifyLoginStruct{}
 	serviceLogin := &service.VerifyLogin{Repository: repositoryLogin}
@@ -45,17 +46,19 @@ func main() {
 	serviceDeleteAccount := &service.DeleteAccount{Repository: repositoryDeleteAccount}
 	handlerDeleteAccount := &handlers.DeleteAccountHandler{Service: serviceDeleteAccount}
 
-	http.HandleFunc("/sign", handlerRegister.NewSignUpHandler)
-	http.HandleFunc("/login", handlerLogin.NewHandlerLogin)
+	mux.HandleFunc("/register", handlerRegister.RegisterHandler)
+	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
 
-	http.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
-	http.HandleFunc("/email", handlerChangeEmail.ChangeEmailHandler)
+	mux.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
+	mux.HandleFunc("/email", handlerChangeEmail.ChangeEmailHandler)
 
-	http.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
+	mux.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
-	http.HandleFunc("/reset", handlerRequest.RequestHandler)
-	http.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
+	mux.HandleFunc("/reset", handlerRequest.RequestHandler)
+	mux.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
+
+	middleware := handlers.Recovery(mux)
 	
 	fmt.Println("SERVER OPEN WITH GOLANG")
-	http.ListenAndServe("127.0.0.1:8000", nil)
+	http.ListenAndServe("127.0.0.1:8000", middleware)
 }
