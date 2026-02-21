@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -12,26 +13,37 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var databaseVariable *sql.DB = database.Connect()
 
-type Register struct{}
+type RegisterStruct struct{
+	Database *sql.DB
+}
 type VerifyLoginStruct struct{}
 type ChangeNameStruct struct{}
 type ChangeEmailStruct struct{}
 type RequestStruct struct{}
 type ResetPasswordStruct struct{}
+type ValidTokenStruct struct{}
 type DeleteAccountStruct struct{}
 
 var test = make([]string, 0, 1)
 
+func NewRegisterStruct(database *sql.DB) *RegisterStruct {
+	return &RegisterStruct{
+		Database: database,
+	}
+}
 
-func (register *Register) NewMysqlInsert(name, email, password string) error {
-	_, err := database.Connect().Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", name, email, password)
+
+func (register *RegisterStruct) Register(ctx context.Context, name, email, password string) error {
+	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", name, email, password)
+	if err != nil {
+		return fmt.Errorf("REPOSITORY ERROR: %w", err)
+	}
 	return err
 }
 
 
-func (verifyLogin *VerifyLoginStruct) NewVerifyLogin(name, email, password string) error {
+func (verifyLogin *VerifyLoginStruct) VerifyLogin(name, email, password string) error {
 
 	var passwordHash string
 	err := database.Connect().QueryRow("SELECT password FROM users WHERE name = ? OR email = ?", name, email).Scan(&passwordHash)
@@ -184,12 +196,9 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 		return err, ""
 	}
 
-	var idToken int
-	var user_id int
-	var expires_at string
 	var used bool
 
-	err = tx.QueryRow("SELECT id, user_id, expires_at, used FROM reset_password WHERE token = ?", token).Scan(&idToken, user_id, expires_at, used)
+	err = tx.QueryRow("SELECT used FROM reset_password WHERE token = ?", token).Scan(&used)
 	if err != nil {
 		log.Println("ERROR: ", err)
 		return err, ""
@@ -207,17 +216,17 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
 	if passwordHash == nil && !used {
+		
 		ctx, cancel := context.WithCancel(context.Background())
 		go func(ctx context.Context) {
 			select {
-			case <-time.After(180 *time.Second):
+			case <-time.After(15 *time.Second):
 				test = test[:0]
 
 			case <-ctx.Done():
 				log.Println("")
 				return
 			}
-
 		}(ctx)
 		
 		cancel()
@@ -229,6 +238,15 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(currentPassword, newPass
 		return err, ""
 	}
 	return nil, ""
+}
+
+
+func Test(token, secondToken string) error {
+	err := database.Connect().QueryRow("SELECT token FROM reset_password WHERE token = ? AND used = FALSE AND expires_at > NOW()", token).Scan(&secondToken)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 
@@ -274,7 +292,6 @@ func (deleteAccount *DeleteAccountStruct) DeleteAccount(email, password string) 
 		log.Println("ERROR: ", err)
 		return err
 	}
-
 	return nil
 }
 
@@ -300,7 +317,7 @@ func RemoveExpiredToken() error {
 
 func UpdatePassword(hash, email string) error {
 	var id int
-	tx, err := databaseVariable.Begin()
+	tx, err := database.Connect().Begin()
 	if err != nil {
 		return err
 	}
@@ -325,7 +342,6 @@ func UpdatePassword(hash, email string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
