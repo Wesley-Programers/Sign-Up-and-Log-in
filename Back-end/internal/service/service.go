@@ -1,9 +1,11 @@
 package service
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"time"
+	"fmt"
 	"unicode"
 
 	"crypto/rand"
@@ -14,7 +16,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type User struct {
+type Register struct {
 	Repository repository.User
 }
 
@@ -42,8 +44,19 @@ type DeleteAccount struct {
 	Repository repository.DeleteAccount
 }
 
+type ValidToken struct {
+	Repository repository.ValidToken
+}
 
-func (user *User) SaveData(name, email, password string) error {
+func NewUserStruct(repository repository.User) *Register {
+	return &Register{
+		Repository: repository,
+	}
+}
+
+var smallTest = make([]string, 0, 1)
+
+func (register *Register) RegisterFunction(ctx context.Context, name, email, password string) error {
 	validPassword, message := VerifyPassword(password)
 	if !validPassword {
 		return errors.New(message)
@@ -54,12 +67,12 @@ func (user *User) SaveData(name, email, password string) error {
 		return err
 	}
 
-	return user.Repository.NewMysqlInsert(name, email, string(hash))
+	return register.Repository.Register(ctx, name, email, string(hash))
 }
 
 
 func (verifyLogin *VerifyLogin) VerifyLoginFunction(name, email, password string) error {
-	return verifyLogin.Repository.NewVerifyLogin(name, email, password)
+	return verifyLogin.Repository.VerifyLogin(name, email, password)
 }
 
 
@@ -73,26 +86,60 @@ func (changeEmail *ChangeEmail) ChangeEmailFunction(currentEmail, newEmail, conf
 }
 
 
-func (request *Request) RequestFunction(email string) error {
+func (request *Request) RequestFunction(email string) (error, string) {
 	err, id := request.Repository.Request(email)
 	if err != nil {
-		return err
+		return err, ""
 		
 	} else {
 		token, err := GenerateTokens()
 		if err != nil {
-			return err
-		}
+			return err, ""
+
+		} else {
+			smallTest = append(smallTest, token)
+
+			ctx, cancel := context.WithCancel(context.Background())
+			go func (ctx context.Context) {
+				select {
+				case <- time.After(15 *time.Second):
+					smallTest = smallTest[:0]
+
+				case <-ctx.Done():
+					fmt.Println("CLEAN")
+					return
+				}
+			}(ctx)
+			cancel()
+		}	
+
 		expiresAt := time.Now().Add(10 * time.Minute)
-		tokenHah := tokenHash(token)
-		err = repository.InsertInto(id, tokenHah, expiresAt)
+		tokenHash := tokenHash(token)
+		err = repository.InsertInto(id, tokenHash, expiresAt)
 		if err != nil {
-			return err
+			return err, ""
 		}
 
-		return nil
+		return nil, token
 
 	}
+}
+
+
+func (validToken *ValidToken) ValidTokenFunction() error {
+	token := smallTest[0]
+	var test string
+	tokenHash := tokenHash(token)
+	err := repository.Test(tokenHash, test)
+	if err != nil {
+		return err
+	} 
+
+	if tokenHash != test {
+		return errors.New("ERROR")
+	}
+	smallTest = smallTest[:0]
+	return nil
 }
 
 
@@ -115,6 +162,7 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPas
 		}
 		return err
 	}
+	
 	err = repository.UpdatePassword(hash, email)
 	if err != nil {
 		_, err = repository.LimitOfAttempts(email)
