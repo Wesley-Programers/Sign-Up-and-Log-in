@@ -1,11 +1,13 @@
 package repository
 
+import "context"
+
 type User interface {
-	NewMysqlInsert(name, email, password string) error
+	Register(ctx context.Context, name, email, password string) error
 }
 
 type LoginUser interface {
-	NewVerifyLogin(name, email, password string) error
+	VerifyLogin(name, email, password string) error
 }
 
 type ChangeName interface {
@@ -22,6 +24,10 @@ type Request interface {
 
 type ResetPassword interface {
 	ResetPassword(currentPassword, newPassword, confirmNewPassword string) (error, string)
+}
+
+type ValidToken interface {
+	ValidToken(token string) error
 }
 
 type DeleteAccount interface {
