@@ -4,14 +4,7 @@ import (
 	"log"
 	"net/http"
 	
-	// "fmt"
-	// "time"
-	// "database/sql"
-	
 	"index/internal/service"
-
-	// "github.com/gorilla/sessions"
-	// "golang.org/x/crypto/bcrypt"
 )
 
 type RegisterHandler struct {
@@ -42,8 +35,47 @@ type DeleteAccountHandler struct {
 	Service *service.DeleteAccount
 }
 
+type ValidTokenHandler struct {
+	Service *service.ValidToken
+}
+
 func NewRegisterHanlder(service *service.Register) *RegisterHandler {
 	return &RegisterHandler{
+		Service: service,
+	}
+}
+func NewLoginHandler(service *service.VerifyLogin) *LoginHandler {
+	return &LoginHandler{
+		Service: service,
+	}
+}
+func NewChangeNameHandler(service *service.ChangeName) *ChangeNameHandler {
+	return &ChangeNameHandler{
+		Service: service,
+	}
+}
+func NewChangeEmailHandler(service *service.ChangeEmail) *ChangeEmailHandler {
+	return &ChangeEmailHandler{
+		Service: service,
+	}
+}
+func NewRequestHandler(service *service.Request) *RequestHandler {
+	return &RequestHandler{
+		Service: service,
+	}
+}
+func NewResetPasswordHandler(service *service.ResetPassword) *ResetPasswordHandler {
+	return &ResetPasswordHandler{
+		Service: service,
+	}
+}
+func NewDeleteAccountHandler(service *service.DeleteAccount) *DeleteAccountHandler {
+	return &DeleteAccountHandler{
+		Service: service,
+	}
+}
+func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
+	return &ValidTokenHandler{
 		Service: service,
 	}
 }
@@ -101,10 +133,13 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 	log.SetFlags(log.Lshortfile)
 
 	if r.Method == http.MethodPost {
+
 		nameOrEmail := r.FormValue("nameEmail")
 		password := r.FormValue("passwordLog")
+
+		ctx := r.Context()
 	
-		err := login.Service.VerifyLoginFunction(nameOrEmail, nameOrEmail, password)
+		err := login.Service.VerifyLoginFunction(ctx, nameOrEmail, nameOrEmail, password)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
@@ -135,10 +170,13 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 	}
 
 	if r.Method == http.MethodPost {
+
 		currentName := r.FormValue("currentName")
 		newName := r.FormValue("newName")
+
+		ctx := r.Context()
 	
-		err := changeName.Service.ChangeNameFunction(currentName, newName)
+		err := changeName.Service.ChangeNameFunction(ctx, currentName, newName)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
@@ -176,8 +214,10 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 		newEmail := r.FormValue("newEmail")
 		confirmNewEmail := r.FormValue("confirmNewEmail")
 		password := r.FormValue("currentPassword")
+
+		ctx := r.Context()
 	
-		err := changeEmail.Service.ChangeEmailFunction(currentEmail, newEmail, confirmNewEmail, password)
+		err := changeEmail.Service.ChangeEmailFunction(ctx, currentEmail, newEmail, confirmNewEmail, password)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
@@ -209,14 +249,15 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 	log.SetFlags(log.Lshortfile)
 
-	if r.Method == http.MethodPost {
+	if r.Method == http.MethodPost || r.Method == http.MethodGet {
 
 		email := r.FormValue("email")
+
+		ctx := r.Context()
 	
-		err, token := requestHandler.Service.RequestFunction(email)
+		err, token := requestHandler.Service.RequestFunction(ctx, email)
 		if err == nil {
 			http.Redirect(w, r, "/reset?token="+token, http.StatusSeeOther)
-			// w.WriteHeader(http.StatusOK)
 			log.Println("SUCCESS")
 	
 		} else {
@@ -251,7 +292,9 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 		newPassword := r.FormValue("newPassword")
 		confirmPassword := r.FormValue("confirmPassword")
 
-		err := resetPasswordHandler.Service.ResetPasswordFunction(currentPassword, newPassword, confirmPassword)
+		ctx := r.Context()
+
+		err := resetPasswordHandler.Service.ResetPasswordFunction(ctx, currentPassword, newPassword, confirmPassword)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID DATA"))
@@ -288,7 +331,9 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 		email := r.FormValue("emailConfirm")
 		password := r.FormValue("passwordConfirm")
 
-		err := deleteAccountHandler.Service.DeleteAccountFunction(email, password)
+		ctx := r.Context()
+
+		err := deleteAccountHandler.Service.DeleteAccountFunction(ctx, email, password)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("VALID"))
@@ -304,4 +349,34 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
 	}
+}
+
+
+func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
+
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	log.SetFlags(log.Lshortfile)
+
+	ctx := r.Context()
+
+	err := validToken.Service.ValidTokenFunction(ctx)
+	if err == nil {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("VALID DATA"))
+		log.Println("SUCCESS")
+
+	} else {
+		log.Println("ERROR")
+		http.Error(w, "ERROR", http.StatusBadRequest)
+		return
+	}
+
 }
