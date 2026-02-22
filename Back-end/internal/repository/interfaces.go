@@ -7,29 +7,29 @@ type User interface {
 }
 
 type LoginUser interface {
-	VerifyLogin(name, email, password string) error
+	VerifyLogin(ctx context.Context, name, email, password string) error
 }
 
 type ChangeName interface {
-	ChangeName(currentName, newName string) error
+	ChangeName(ctx context.Context, currentName, newName string) error
 }
 
 type ChangeEmail interface {
-	ChangeEmail(currentEmail, newEmail, confirmNewEmail, password string) error
+	ChangeEmail(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error
 }
 
 type Request interface {
-	Request(email string) (error, int)
+	Request(ctx context.Context, email string) (error, int)
 }
 
 type ResetPassword interface {
-	ResetPassword(currentPassword, newPassword, confirmNewPassword string) (error, string)
+	ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string)
 }
 
 type ValidToken interface {
-	ValidToken(token string) error
+	ValidToken(ctx context.Context, token, secondToken string) error
 }
 
 type DeleteAccount interface {
-	DeleteAccount(email, password string) error
+	DeleteAccount(ctx context.Context, email, password string) error
 }
