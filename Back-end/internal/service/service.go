@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"errors"
-	"time"
 	"fmt"
+	"time"
 	"unicode"
 
 	"crypto/rand"
@@ -53,6 +54,41 @@ func NewUserStruct(repository repository.User) *Register {
 		Repository: repository,
 	}
 }
+func NewVerifyLogin(repository repository.LoginUser) *VerifyLogin {
+	return &VerifyLogin{
+		Repository: repository,
+	}
+}
+func NewChangeName(repository repository.ChangeName) *ChangeName {
+	return &ChangeName{
+		Repository: repository,
+	}
+}
+func NewChangeEmail(repository repository.ChangeEmail) *ChangeEmail {
+	return &ChangeEmail{
+		Repository: repository,
+	}
+}
+func NewRequest(repository repository.Request) *Request {
+	return &Request{
+		Repository: repository,
+	}
+}
+func NewResetPassword(repository repository.ResetPassword) *ResetPassword {
+	return &ResetPassword{
+		Repository: repository,
+	}
+}
+func NewDeleteAccount(repository repository.DeleteAccount) *DeleteAccount {
+	return &DeleteAccount{
+		Repository: repository,
+	}
+}
+func NewValidToken(repository repository.ValidToken) *ValidToken {
+	return &ValidToken{
+		Repository: repository,
+	}
+}
 
 var smallTest = make([]string, 0, 1)
 
@@ -71,23 +107,23 @@ func (register *Register) RegisterFunction(ctx context.Context, name, email, pas
 }
 
 
-func (verifyLogin *VerifyLogin) VerifyLoginFunction(name, email, password string) error {
-	return verifyLogin.Repository.VerifyLogin(name, email, password)
+func (verifyLogin *VerifyLogin) VerifyLoginFunction(ctx context.Context, name, email, password string) error {
+	return verifyLogin.Repository.VerifyLogin(ctx, name, email, password)
 }
 
 
-func (changeName *ChangeName) ChangeNameFunction(currentName, newName string) error {
-	return changeName.Repository.ChangeName(currentName, newName)
+func (changeName *ChangeName) ChangeNameFunction(ctx context.Context, currentName, newName string) error {
+	return changeName.Repository.ChangeName(ctx, currentName, newName)
 }
 
 
-func (changeEmail *ChangeEmail) ChangeEmailFunction(currentEmail, newEmail, confirmNewEmail, password string) error {
-	return changeEmail.Repository.ChangeEmail(currentEmail, newEmail, confirmNewEmail, password)
+func (changeEmail *ChangeEmail) ChangeEmailFunction(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error {
+	return changeEmail.Repository.ChangeEmail(ctx, currentEmail, newEmail, confirmNewEmail, password)
 }
 
 
-func (request *Request) RequestFunction(email string) (error, string) {
-	err, id := request.Repository.Request(email)
+func (request *Request) RequestFunction(ctx context.Context, email string) (error, string) {
+	err, id := request.Repository.Request(ctx, email)
 	if err != nil {
 		return err, ""
 		
@@ -99,41 +135,39 @@ func (request *Request) RequestFunction(email string) (error, string) {
 		} else {
 			smallTest = append(smallTest, token)
 
-			ctx, cancel := context.WithCancel(context.Background())
-			go func (ctx context.Context) {
-				select {
-				case <- time.After(15 *time.Second):
-					smallTest = smallTest[:0]
+			// ctx, cancel := context.WithCancel(context.Background())
+			// go func (ctx context.Context) {
+			// 	select {
+			// 	case <- time.After(200 *time.Second):
+			// 		smallTest = smallTest[:0]
 
-				case <-ctx.Done():
-					fmt.Println("CLEAN")
-					return
-				}
-			}(ctx)
-			cancel()
+			// 	case <-ctx.Done():
+			// 		return
+			// 	}
+			// }(ctx)
+			// cancel()
 		}	
 
 		expiresAt := time.Now().Add(10 * time.Minute)
 		tokenHash := tokenHash(token)
-		err = repository.InsertInto(id, tokenHash, expiresAt)
+		err = repository.InsertInto(ctx, id, tokenHash, expiresAt)
 		if err != nil {
 			return err, ""
 		}
 
 		return nil, token
-
 	}
 }
 
 
-func (validToken *ValidToken) ValidTokenFunction() error {
+func (validToken *ValidToken) ValidTokenFunction(ctx context.Context) error {
 	token := smallTest[0]
 	var test string
 	tokenHash := tokenHash(token)
-	err := repository.Test(tokenHash, test)
+	err := validToken.Repository.ValidToken(ctx, tokenHash, test)
 	if err != nil {
-		return err
-	} 
+		return fmt.Errorf("Service error: %w", err)
+	}
 
 	if tokenHash != test {
 		return errors.New("ERROR")
@@ -143,7 +177,7 @@ func (validToken *ValidToken) ValidTokenFunction() error {
 }
 
 
-func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPassword, confirmNewPassword string) error {
+func (resetPasword *ResetPassword) ResetPasswordFunction(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) error {
 	validPassword, message := VerifyPassword(newPassword)
 	if !validPassword {
 		return errors.New(message)
@@ -154,18 +188,18 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPas
 		return err
 	}
 
-	err, email := resetPasword.Repository.ResetPassword(currentPassword, newPassword, confirmNewPassword)
+	err, email := resetPasword.Repository.ResetPassword(ctx, currentPassword, newPassword, confirmNewPassword)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(email)
+		_, err = repository.LimitOfAttempts(ctx, &sql.DB{}, email)
 		if err != nil {
 			return err
 		}
 		return err
 	}
 	
-	err = repository.UpdatePassword(hash, email)
+	err = repository.UpdatePassword(ctx, &sql.DB{}, hash, email)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(email)
+		_, err = repository.LimitOfAttempts(ctx, &sql.DB{}, email)
 		if err != nil {
 			return err
 		}
@@ -176,8 +210,8 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(currentPassword, newPas
 }
 
 
-func (delete *DeleteAccount) DeleteAccountFunction(email, password string) error {
-	return delete.Repository.DeleteAccount(email, password)
+func (delete *DeleteAccount) DeleteAccountFunction(ctx context.Context, email, password string) error {
+	return delete.Repository.DeleteAccount(ctx, email, password)
 }
 
 
