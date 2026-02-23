@@ -19,14 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
         
         try {
 
-            const fetchAqui = await fetch("http://127.0.0.1:8000/sign", {
+            const fetchAqui = await fetch("http://127.0.0.1:8000/register", {
                 method: "POST",
                 body: formData,
                 credentials: "include",
             })
-
-            let incorretEmail = document.getElementById('emailIncorrect');
-            let shortPassword = document.getElementById('shortPassword');
 
             const status = fetchAqui.status
             const message = await fetchAqui.text()
