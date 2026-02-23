@@ -22,29 +22,34 @@ func main() {
 	serviceRegister := service.NewUserStruct(repositoryRegister)
 	handlerRegister := handlers.NewRegisterHanlder(serviceRegister)
 
-	repositoryLogin := &repository.VerifyLoginStruct{}
-	serviceLogin := &service.VerifyLogin{Repository: repositoryLogin}
-	handlerLogin := &handlers.LoginHandler{Service: serviceLogin}
+	repositoryLogin := repository.NewVerifyLoginStruct(database)
+	serviceLogin := service.NewVerifyLogin(repositoryLogin)
+	handlerLogin := handlers.NewLoginHandler(serviceLogin)
 
-	repositoryChangeName := &repository.ChangeNameStruct{}
-	serviceChangeName := &service.ChangeName{Repository: repositoryChangeName}	
-	handlerChangeName := &handlers.ChangeNameHandler{Service: serviceChangeName}
+	repositoryChangeName := repository.NewChangeNameStruct(database)
+	serviceChangeName := service.NewChangeName(repositoryChangeName)
+	handlerChangeName := handlers.NewChangeNameHandler(serviceChangeName)
 
-	repositoryChangeEmail := &repository.ChangeEmailStruct{}
-	serviceChangeEmail := &service.ChangeEmail{Repository: repositoryChangeEmail}
-	handlerChangeEmail := &handlers.ChangeEmailHandler{Service: serviceChangeEmail}
+	repositoryChangeEmail := repository.NewChangeEmailStruct(database)
+	serviceChangeEmail := service.NewChangeEmail(repositoryChangeEmail)
+	handlerChangeEmail := handlers.NewChangeEmailHandler(serviceChangeEmail)
 
-	repositoryRequest := &repository.RequestStruct{}
-	serviceRequest := &service.Request{Repository: repositoryRequest}
-	handlerRequest := &handlers.RequestHandler{Service: serviceRequest}
+	repositoryRequest := repository.NewRequestStruct(database)
+	serviceRequest := service.NewRequest(repositoryRequest)
+	handlerRequest := handlers.NewRequestHandler(serviceRequest)
 
-	repositoryResetPassword := &repository.ResetPasswordStruct{}
-	serviceResetPassword := &service.ResetPassword{Repository: repositoryResetPassword}
-	handlerResetPassword := &handlers.ResetPasswordHandler{Service: serviceResetPassword}
+	repositoryResetPassword := repository.NewResetPasswordStruct(database)
+	serviceResetPassword := service.NewResetPassword(repositoryResetPassword)
+	handlerResetPassword := handlers.NewResetPasswordHandler(serviceResetPassword)
 
-	repositoryDeleteAccount := &repository.DeleteAccountStruct{}
-	serviceDeleteAccount := &service.DeleteAccount{Repository: repositoryDeleteAccount}
-	handlerDeleteAccount := &handlers.DeleteAccountHandler{Service: serviceDeleteAccount}
+	repositoryDeleteAccount := repository.NewDeleteAccountStruct(database)
+	serviceDeleteAccount := service.NewDeleteAccount(repositoryDeleteAccount)
+	handlerDeleteAccount := handlers.NewDeleteAccountHandler(serviceDeleteAccount)
+
+	repositoryValidToken := repository.NewValidTokenStruct(database)
+	serviceValidToken := service.NewValidToken(repositoryValidToken)
+	handlerValidToken := handlers.NewValidTokenHandler(serviceValidToken)
+
 
 	mux.HandleFunc("/register", handlerRegister.RegisterHandler)
 	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
@@ -56,6 +61,8 @@ func main() {
 
 	mux.HandleFunc("/reset", handlerRequest.RequestHandler)
 	mux.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
+
+	mux.HandleFunc("/valid", handlerValidToken.ValidTokenHandler)
 
 	middleware := handlers.Recovery(mux)
 	
