@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -12,7 +11,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
-	"index/internal/repository"
+	"index/Back-end/internal/repository"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -163,15 +162,12 @@ func (request *Request) RequestFunction(ctx context.Context, email string) (erro
 func (validToken *ValidToken) ValidTokenFunction(ctx context.Context) error {
 	token := smallTest[0]
 	var test string
-	tokenHash := tokenHash(token)
-	err := validToken.Repository.ValidToken(ctx, tokenHash, test)
+	hash := tokenHash(token)
+	err := validToken.Repository.ValidToken(ctx, hash, test)
 	if err != nil {
 		return fmt.Errorf("Service error: %w", err)
 	}
 
-	if tokenHash != test {
-		return errors.New("ERROR")
-	}
 	smallTest = smallTest[:0]
 	return nil
 }
@@ -190,16 +186,16 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(ctx context.Context, cu
 
 	err, email := resetPasword.Repository.ResetPassword(ctx, currentPassword, newPassword, confirmNewPassword)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(ctx, &sql.DB{}, email)
+		_, err = repository.LimitOfAttempts(ctx, email)
 		if err != nil {
 			return err
 		}
 		return err
 	}
 	
-	err = repository.UpdatePassword(ctx, &sql.DB{}, hash, email)
+	err = repository.UpdatePassword(ctx, hash, email)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(ctx, &sql.DB{}, email)
+		_, err = repository.LimitOfAttempts(ctx, email)
 		if err != nil {
 			return err
 		}
