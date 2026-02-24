@@ -3,8 +3,10 @@ package handlers
 import (
 	"log"
 	"net/http"
+	"html/template"
 	
-	"index/internal/service"
+	"index"
+	"index/Back-end/internal/service"
 )
 
 type RegisterHandler struct {
@@ -80,6 +82,7 @@ func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
 	}
 }
 
+var tmpl = template.Must(template.ParseFS(siginlogin.Files, "templates/reset.html"))
 
 func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -107,11 +110,10 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 	
 		} else {
 			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("VALID DATA"))
+			w.Write([]byte("VALID"))
 			log.Println("SUCCESS")
 		}
 	
-
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
@@ -142,7 +144,7 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 		err := login.Service.VerifyLoginFunction(ctx, nameOrEmail, nameOrEmail, password)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID DATA"))
+			w.Write([]byte("VALID"))
 			log.Println("SUCCESS")
 	
 		} else {
@@ -179,7 +181,7 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 		err := changeName.Service.ChangeNameFunction(ctx, currentName, newName)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID DATA"))
+			w.Write([]byte("VALID"))
 			log.Println("SUCCESS")
 	
 		} else {
@@ -220,7 +222,7 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 		err := changeEmail.Service.ChangeEmailFunction(ctx, currentEmail, newEmail, confirmNewEmail, password)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID DATA"))
+			w.Write([]byte("VALID"))
 			log.Println("SUCCESS")
 	
 		} else {
@@ -249,7 +251,7 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 	log.SetFlags(log.Lshortfile)
 
-	if r.Method == http.MethodPost || r.Method == http.MethodGet {
+	if r.Method == http.MethodPost {
 
 		email := r.FormValue("email")
 
@@ -257,24 +259,22 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 	
 		err, token := requestHandler.Service.RequestFunction(ctx, email)
 		if err == nil {
-			http.Redirect(w, r, "/reset?token="+token, http.StatusSeeOther)
 			log.Println("SUCCESS")
-	
+			
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-
-	} else {
-		log.Println("ERROR")
-		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		
+		http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
+		return
 	}
 }
 
 
 func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
-
+	
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -290,14 +290,14 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 
 		currentPassword := r.FormValue("currentPassword")
 		newPassword := r.FormValue("newPassword")
-		confirmPassword := r.FormValue("confirmPassword")
+		confirmPassword := r.FormValue("confirmNewPassword")
 
 		ctx := r.Context()
 
 		err := resetPasswordHandler.Service.ResetPasswordFunction(ctx, currentPassword, newPassword, confirmPassword)
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID DATA"))
+			w.Write([]byte("VALID"))
 			log.Println("SUCCESS")
 
 		} else {
@@ -355,7 +355,7 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "text/html; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
@@ -368,15 +368,15 @@ func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r 
 	ctx := r.Context()
 
 	err := validToken.Service.ValidTokenFunction(ctx)
-	if err == nil {
+	token := r.URL.Query().Get("token")
+	if err == nil && token != "" {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("VALID DATA"))
+		tmpl.Execute(w, nil)
 		log.Println("SUCCESS")
 
 	} else {
-		log.Println("ERROR")
+		log.Println("ERROR: ", err)
 		http.Error(w, "ERROR", http.StatusBadRequest)
 		return
 	}
-
 }
