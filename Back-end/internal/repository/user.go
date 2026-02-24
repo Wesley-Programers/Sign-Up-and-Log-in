@@ -8,7 +8,7 @@ import (
 	"log"
 	"time"
 	
-	"index/internal/database"
+	"index/Back-end/internal/database"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -200,12 +200,8 @@ func (request *RequestStruct) Request(ctx context.Context, email string) (error,
 		return err, 0
 	}
 
-	if verify == email {
-		test = append(test, email)
-		return nil, id
-	}
-
-	return nil, 0
+	test = append(test, email)
+	return nil, id
 }
 
 func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string) {
@@ -238,7 +234,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 		return err, ""
 	}
 
-	allowed, err := LimitOfAttempts(ctx, &sql.DB{}, email)
+	allowed, err := LimitOfAttempts(ctx, email)
 	if err != nil {
 		return err, ""
 	}
@@ -250,19 +246,19 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
 	if passwordHash == nil && !used {
 
-		// ctx, cancel := context.WithCancel(context.Background())
-		// go func(ctx context.Context) {
-		// 	select {
-		// 	case <-time.After(15 * time.Second):
-		// 		test = test[:0]
+		ctx, cancel := context.WithCancel(context.Background())
+		go func(ctx context.Context) {
+			select {
+			case <-time.After(100 * time.Second):
+				test = test[:0]
 
-		// 	case <-ctx.Done():
-		// 		log.Println("")
-		// 		return
-		// 	}
-		// }(ctx)
+			case <-ctx.Done():
+				log.Println("")
+				return
+			}
+		}(ctx)
 
-		// cancel()
+		cancel()
 		return nil, email
 	}
 
@@ -274,9 +270,13 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 }
 
 func (validToken *ValidTokenStruct) ValidToken(ctx context.Context, token, secondToken string) error {
-	err := validToken.Database.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE token = ? AND used = FALSE AND expires_at > NOW()", token).Scan(&secondToken)
+	err := validToken.Database.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE token = ? AND used = FALSE", token).Scan(&secondToken)
 	if err != nil {
 		return err
+	}
+
+	if token != secondToken {
+		return errors.New("Invalid token")
 	}
 	return nil
 }
@@ -322,6 +322,7 @@ func (deleteAccount *DeleteAccountStruct) DeleteAccount(ctx context.Context, ema
 	return nil
 }
 
+
 func RemoveExpiredToken() error {
 
 	context, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -340,9 +341,10 @@ func RemoveExpiredToken() error {
 	return nil
 }
 
-func UpdatePassword(ctx context.Context, database *sql.DB, hash, email string) error {
+
+func UpdatePassword(ctx context.Context, hash, email string) error {
 	var id int
-	tx, err := database.BeginTx(ctx, nil)
+	tx, err := database.Connect().BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("Repository error: %w", err)
 	}
@@ -370,10 +372,11 @@ func UpdatePassword(ctx context.Context, database *sql.DB, hash, email string) e
 	return nil
 }
 
-func LimitOfAttempts(ctx context.Context, database *sql.DB, email string) (bool, error) {
+
+func LimitOfAttempts(ctx context.Context, email string) (bool, error) {
 	var emailCount int
 
-	tx, err := database.BeginTx(ctx, nil)
+	tx, err := database.Connect().BeginTx(ctx, nil)
 	if err != nil {
 		return false, err
 	}
