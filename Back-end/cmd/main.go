@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"index/internal/database"
-	"index/internal/handlers"
-	"index/internal/service"
-	"index/internal/repository"
+	"index/Back-end/internal/database"
+	"index/Back-end/internal/handlers"
+	"index/Back-end/internal/service"
+	"index/Back-end/internal/repository"
 )
 
 
