@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"html/template"
 	
-	"index"
+	"index/Back-end/internal/ui"
 	"index/Back-end/internal/service"
 )
 
@@ -82,7 +82,7 @@ func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
 	}
 }
 
-var tmpl = template.Must(template.ParseFS(siginlogin.Files, "templates/reset.html"))
+var tmpl = template.Must(template.ParseFS(ui.Files, "templates/reset.html"))
 
 func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 
@@ -123,6 +123,7 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 
 func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -240,6 +241,7 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 
 func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -275,6 +277,7 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -354,6 +357,7 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 
 func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 
+	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "text/html; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
