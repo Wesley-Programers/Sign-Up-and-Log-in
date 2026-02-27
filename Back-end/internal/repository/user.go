@@ -90,6 +90,7 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 	return err
 }
 
+
 func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, email, password string) error {
 
 	var passwordHash string
@@ -105,6 +106,7 @@ func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, ema
 
 	return nil
 }
+
 
 func (changeName *ChangeNameStruct) ChangeName(ctx context.Context, currentName, newName string) error {
 	var exist bool
@@ -141,6 +143,7 @@ func (changeName *ChangeNameStruct) ChangeName(ctx context.Context, currentName,
 
 	return nil
 }
+
 
 func (changeEmail *ChangeEmailStruct) ChangeEmail(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error {
 
@@ -191,18 +194,41 @@ func (changeEmail *ChangeEmailStruct) ChangeEmail(ctx context.Context, currentEm
 	return nil
 }
 
+
 func (request *RequestStruct) Request(ctx context.Context, email string) (error, int) {
 	var id int
 	var verify string
+	var attempts int
 
-	err := request.Database.QueryRowContext(ctx, "SELECT id, email FROM users WHERE email = ?", email).Scan(&id, &verify)
+	tx, err := request.Database.BeginTx(ctx, nil)
+	if err != nil {
+		return err, 0
+	}
+	defer tx.Rollback()
+
+	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&attempts)
+	if err != nil {
+		return err, 0
+	}
+
+	if attempts >= 5 {
+		return errors.New("ERROR"), 0
+	}
+
+	err = tx.QueryRowContext(ctx, "SELECT id, email FROM users WHERE email = ?", email).Scan(&id, &verify)
 	if err != nil {
 		return err, 0
 	}
 
 	test = append(test, email)
+	err = tx.Commit()
+	if err != nil {
+		return err, 0
+	}
+
 	return nil, id
 }
+
 
 func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string) {
 	var id int
@@ -245,20 +271,6 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 
 	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
 	if passwordHash == nil && !used {
-
-		ctx, cancel := context.WithCancel(context.Background())
-		go func(ctx context.Context) {
-			select {
-			case <-time.After(100 * time.Second):
-				test = test[:0]
-
-			case <-ctx.Done():
-				log.Println("")
-				return
-			}
-		}(ctx)
-
-		cancel()
 		return nil, email
 	}
 
@@ -268,6 +280,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 	}
 	return nil, ""
 }
+
 
 func (validToken *ValidTokenStruct) ValidToken(ctx context.Context, token, secondToken string) error {
 	err := validToken.Database.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE token = ? AND used = FALSE", token).Scan(&secondToken)
@@ -280,6 +293,7 @@ func (validToken *ValidTokenStruct) ValidToken(ctx context.Context, token, secon
 	}
 	return nil
 }
+
 
 func (deleteAccount *DeleteAccountStruct) DeleteAccount(ctx context.Context, email, password string) error {
 
