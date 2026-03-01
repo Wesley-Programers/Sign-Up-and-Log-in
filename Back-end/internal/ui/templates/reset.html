@@ -7,27 +7,27 @@
 </head>
 <body>
 
-    <form action="http://127.0.0.1:8000/reset/password" method="post" id="resetForm">
+    <form method="post" id="resetForm">
         <input type="password" name="currentPassword" id="currentPassword" required placeholder="Your password">
         <input type="password" name="newPassword" id="newPassword" required placeholder="Your new password">
         <input type="password" name="confirmNewPassword" id="confirmPassword" required placeholder="Confirm the password">
 
-        <button type="submit">SEND</button>
+        <button>SEND</button>
     </form>
     
     <script>
         document.addEventListener("DOMContentLoaded", () => {
+            let resetForm = document.getElementById("resetForm");
 
-            resetForm.addEventListener("submit", async (form) => {
-
-                form.preventDefault();
-                const formData = new FormData(form.target)
+            resetForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target)
 
                 try {
 
                     const fetchResetPassword = await fetch("http://127.0.0.1:8000/reset/password", {
                         method: "POST",
-                        body: formData,
+                        body: formData
                     })
 
                     const status = fetchResetPassword.status
@@ -36,16 +36,14 @@
 
                     if (status === 200 && message === "VALID") {
                         alert("SUCCESS");
-
-                    } else if (status === 400) {
+                    } else {
                         alert("ERROR");
-                    };
+                    }
 
-                } catch (error) {
-                    console.log("ERROR: ", error);
-                    alert("SOME ERROR");
+                } catch(error) {
+                    console.error("ERROR: ", error)
+                    alert("SOME ERROR")
                 };
-                
             });
         });
     </script>
