@@ -220,7 +220,7 @@ func (request *RequestStruct) Request(ctx context.Context, email string) (error,
 		return err, 0
 	}
 
-	test = append(test, email)
+	test = append(test, verify)
 	err = tx.Commit()
 	if err != nil {
 		return err, 0
@@ -234,6 +234,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 	var id int
 	var verify string
 	var token string
+	var used bool
 
 	tx, err := resetPassword.Database.BeginTx(ctx, nil)
 	if err != nil {
@@ -243,17 +244,26 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 
 	email := test[0]
 
-	err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
+	if newPassword != confirmNewPassword {
+		return errors.New("ERROR"), ""
+	} else if currentPassword == newPassword {
+		return errors.New("ERROR"), ""
+	}
+
+	err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ? FOR UPDATE", email).Scan(&id, &verify)
 	if err != nil {
 		return err, ""
+	}
+
+	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
+	if passwordHash != nil {
+		return passwordHash, ""
 	}
 
 	err = tx.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE user_id = ?", id).Scan(&token)
 	if err != nil {
 		return err, ""
 	}
-
-	var used bool
 
 	err = tx.QueryRowContext(ctx, "SELECT used FROM reset_password WHERE token = ?", token).Scan(&used)
 	if err != nil {
@@ -269,16 +279,16 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 		return errors.New("ERROR"), ""
 	}
 
-	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
-	if passwordHash == nil && !used {
-		return nil, email
+	if used {
+		return errors.New("ERROR"), ""
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		return fmt.Errorf("Repository error: %w", err), ""
 	}
-	return nil, ""
+
+	return nil, email
 }
 
 
@@ -311,7 +321,7 @@ func (deleteAccount *DeleteAccountStruct) DeleteAccount(ctx context.Context, ema
 		return err
 	}
 
-	err = tx.QueryRowContext(ctx, "SELECT password FROM users WHERE = ?", email).Scan(&verifyPassword)
+	err = tx.QueryRowContext(ctx, "SELECT password FROM users WHERE email = ?", email).Scan(&verifyPassword)
 	if err != nil {
 		return err
 	}
@@ -337,12 +347,12 @@ func (deleteAccount *DeleteAccountStruct) DeleteAccount(ctx context.Context, ema
 }
 
 
-func RemoveExpiredToken() error {
+func RemoveExpiredToken(database *sql.DB) error {
 
-	context, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	result, err := database.Connect().ExecContext(context, "DELETE FROM reset_password WHERE expires_at < NOW() OR used = TRUE")
+	result, err := database.ExecContext(ctx, "DELETE FROM reset_password WHERE expires_at < NOW() OR used = TRUE")
 	if err != nil {
 		return err
 	}
