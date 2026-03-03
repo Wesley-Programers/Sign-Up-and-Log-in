@@ -76,7 +76,7 @@ func CreateTableResetPassword(database *sql.DB) {
 		created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		expires_at TIMESTAMP NOT NULL,
 		used BOOLEAN DEFAULT FALSE,
-		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCATE
+		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 	)`)
 
 	if err != nil {
