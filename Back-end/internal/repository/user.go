@@ -6,8 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
-	
+
 	"index/Back-end/internal/database"
 
 	"golang.org/x/crypto/bcrypt"
@@ -37,8 +38,6 @@ type ValidTokenStruct struct {
 type DeleteAccountStruct struct {
 	Database *sql.DB
 }
-
-var test = make([]string, 0, 1)
 
 func NewRegisterStruct(database *sql.DB) *RegisterStruct {
 	return &RegisterStruct{
@@ -81,6 +80,10 @@ func NewDeleteAccountStruct(database *sql.DB) *DeleteAccountStruct {
 	}
 }
 
+var (
+	test string
+	lock sync.Mutex
+)
 
 func (register *RegisterStruct) Register(ctx context.Context, name, email, password string) error {
 	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", name, email, password)
@@ -220,7 +223,10 @@ func (request *RequestStruct) Request(ctx context.Context, email string) (error,
 		return err, 0
 	}
 
-	test = append(test, verify)
+	lock.Lock()
+	test = verify
+	lock.Unlock()
+	
 	err = tx.Commit()
 	if err != nil {
 		return err, 0
@@ -242,7 +248,9 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 	}
 	defer tx.Rollback()
 
-	email := test[0]
+	lock.Lock()
+	email := test
+	lock.Unlock()
 
 	if newPassword != confirmNewPassword {
 		return errors.New("ERROR"), ""
@@ -250,7 +258,7 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 		return errors.New("ERROR"), ""
 	}
 
-	err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ? FOR UPDATE", email).Scan(&id, &verify)
+	err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
 	if err != nil {
 		return err, ""
 	}
