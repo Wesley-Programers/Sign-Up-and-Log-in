@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 	"unicode"
 
@@ -15,6 +17,7 @@ import (
 
 	"golang.org/x/crypto/bcrypt"
 )
+
 
 type Register struct {
 	Repository repository.User
@@ -89,7 +92,10 @@ func NewValidToken(repository repository.ValidToken) *ValidToken {
 	}
 }
 
-var smallTest = make([]string, 0, 1)
+var (
+	test string
+	lock sync.Mutex
+)
 
 func (register *Register) RegisterFunction(ctx context.Context, name, email, password string) error {
 	validPassword, message := VerifyPassword(password)
@@ -131,21 +137,11 @@ func (request *Request) RequestFunction(ctx context.Context, email string) (erro
 		if err != nil {
 			return err, ""
 
-		} else {
-			smallTest = append(smallTest, token)
+		}
 
-			// ctx, cancel := context.WithCancel(context.Background())
-			// go func (ctx context.Context) {
-			// 	select {
-			// 	case <- time.After(200 *time.Second):
-			// 		smallTest = smallTest[:0]
-
-			// 	case <-ctx.Done():
-			// 		return
-			// 	}
-			// }(ctx)
-			// cancel()
-		}	
+		lock.Lock()
+		test = token
+		lock.Unlock()
 
 		expiresAt := time.Now().Add(10 * time.Minute)
 		tokenHash := tokenHash(token)
@@ -160,7 +156,7 @@ func (request *Request) RequestFunction(ctx context.Context, email string) (erro
 
 
 func (validToken *ValidToken) ValidTokenFunction(ctx context.Context) error {
-	token := smallTest[0]
+	token := test
 	var test string
 	hash := tokenHash(token)
 	err := validToken.Repository.ValidToken(ctx, hash, test)
@@ -168,7 +164,6 @@ func (validToken *ValidToken) ValidTokenFunction(ctx context.Context) error {
 		return fmt.Errorf("Service error: %w", err)
 	}
 
-	smallTest = smallTest[:0]
 	return nil
 }
 
@@ -180,7 +175,7 @@ func (resetPasword *ResetPassword) ResetPasswordFunction(ctx context.Context, cu
 	}
 
 	hash, err := HashPassword(newPassword)
-	if err != nil && validPassword {
+	if err != nil {
 		return err
 	}
 
@@ -251,7 +246,6 @@ func VerifyPassword(password string) (bool, string) {
 	}
 
 	return true, ""
-
 }
 
 
@@ -270,12 +264,11 @@ func GenerateTokens() (string, error) {
 }
 
 
-func StartToRemoverExpiredTokens() {
-	ticker := time.NewTicker(10 * time.Second)
-	defer ticker.Stop()
+func StartToRemoverExpiredTokens(database *sql.DB) {
+	ticker := time.NewTicker(20 * time.Second)
 
 	for range ticker.C {
-		repository.RemoveExpiredToken()
+		repository.RemoveExpiredToken(database)
 	}
 }
 
