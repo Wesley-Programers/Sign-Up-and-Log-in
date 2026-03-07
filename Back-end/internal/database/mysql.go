@@ -1,10 +1,11 @@
 package database
 
 import (
-	"fmt"
 	"database/sql"
+	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/joho/godotenv"
@@ -22,26 +23,33 @@ func Connect() *sql.DB {
 	databaseName := os.Getenv("DATABASE_NAME")
 	databaseHost := os.Getenv("DATABASE_HOST")
 	databasePort := os.Getenv("DATABASE_PORT")
+	databaseConfig := os.Getenv("DATABASE_CONFIG")
 
-	dataSourceTime := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", databaseUser, databasePassword, databaseHost, databasePort, databaseName)
+	dataSourceTime := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?%s", databaseUser, databasePassword, databaseHost, databasePort, databaseName, databaseConfig)
 
 	database, err := sql.Open("mysql", dataSourceTime) 
 	if err != nil {
-		log.Fatal("ERRO: ", err)
+		log.Fatal("ERROR: ", err)
 	}
 
 	if err = database.Ping(); err != nil {
         log.Fatal("ERROR: ", err)
     }
 
-	CreateTable(database)
-	CreateTableResetPassword(database)
-	CreateTableAttempts(database)
+	database.SetMaxOpenConns(20)
+	database.SetMaxIdleConns(10)
+	database.SetConnMaxLifetime(10 * time.Minute)
+
+	createTable(database)
+	createTableResetPassword(database)
+	createTableAttempts(database)
+	createLoginAttempts(database)
+	
 	return database
 }
 
 
-func CreateTable(database *sql.DB) {
+func createTable(database *sql.DB) {
 
 	if database == nil {
 		log.Fatal("ERROR") 
@@ -62,7 +70,7 @@ func CreateTable(database *sql.DB) {
 }
 
 
-func CreateTableResetPassword(database *sql.DB) {
+func createTableResetPassword(database *sql.DB) {
 
 	if database == nil {
 		log.Fatal("ERROR")
@@ -77,7 +85,7 @@ func CreateTableResetPassword(database *sql.DB) {
 		expires_at TIMESTAMP NOT NULL,
 		used BOOLEAN DEFAULT FALSE,
 		FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-	)`)
+	);`)
 
 	if err != nil {
 		log.Fatal("ERROR: ", err)
@@ -85,7 +93,7 @@ func CreateTableResetPassword(database *sql.DB) {
 }
 
 
-func CreateTableAttempts(database *sql.DB) {
+func createTableAttempts(database *sql.DB) {
 
 	if database == nil {
 		log.Fatal("ERROR")
@@ -97,7 +105,27 @@ func CreateTableAttempts(database *sql.DB) {
 		email VARCHAR(120) NOT NULL,
 		attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		INDEX index_email_time(email, attempted_at)
-	)`)
+	);`)
+
+	if err != nil {
+		log.Fatal("ERROR: ", err)
+	}
+}
+
+func createLoginAttempts(database *sql.DB) {
+	
+	if database == nil {
+		log.Fatal("ERROR")
+	}
+
+	_, err := database.Exec(`
+	CREATE TABLE IF NOT EXISTS login_attempts (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		email VARCHAR(120) NOT NULL,
+		attempt_in TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		success TINYINT(1) DEFAULT 0,
+		INDEX index_email(email, attempt_in)
+	);`)
 
 	if err != nil {
 		log.Fatal("ERROR: ", err)
