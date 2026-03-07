@@ -7,7 +7,7 @@ type User interface {
 }
 
 type LoginUser interface {
-	VerifyLogin(ctx context.Context, name, email, password string) error
+	VerifyLogin(ctx context.Context, name, email, password string) (error, bool, string)
 }
 
 type ChangeName interface {
