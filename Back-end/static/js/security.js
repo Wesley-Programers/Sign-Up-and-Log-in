@@ -86,7 +86,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let someErrorMessage = document.getElementById("someErrorMessage");
 
     form.addEventListener("submit", async (e) => {
+        let button = document.getElementById("saveNewName");
+
         e.preventDefault();
+        button.disabled = true;
         const formData = new FormData(e.target);
 
         try {
@@ -100,7 +103,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchChangeName.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "VALID DATA") {
+            if (status === 200 && message === "VALID") {
 
                 alert("EVERYTHING IS WORK");
                 window.location.reload();
@@ -118,26 +121,32 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch ( error ) {
             console.error("ERROR: ", error)
             alert("SOME ERROR");
+
+        } finally {
+            button.disabled = false;
         };
 
     });
 
 
     formEmail.addEventListener("submit", async (a) => {
+        let button = document.getElementById("saveNewEmail");
+
         a.preventDefault();
+        button.disabled = true;
         const formDataEmail = new FormData(a.target);
 
         try {
             const fetchChangeEmail = await fetch("http://127.0.0.1:8000/email", {
                 method: "POST",
                 body: formDataEmail,
-            })
+            });
 
             const status = fetchChangeEmail.status
             const message = await fetchChangeEmail.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "VALID DATA") {
+            if (status === 200 && message === "VALID") {
                 alert("EVERYTHING OK");
                 window.location.reload();
 
@@ -155,18 +164,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } else {
                 someErrorEmailMessage.style.display = 'block';
-
             };
 
         } catch ( error ) {
             console.error("ERROR: ", error)
+
+        } finally {
+            button.disabled = false;
         };
 
     });
 
     
     deleteAccountForm.addEventListener("submit", async (form) => {
+        let button = document.getElementById("buttonDeleteAccount");
+
         form.preventDefault();
+        button.disabled = true;
         const formData = new FormData(form.target);
 
         try {
@@ -174,13 +188,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const deleteAccountFetch = await fetch("http://127.0.0.1:8000/delete", {
                 method: "POST",
                 body: formData,
-            })
+            });
 
             const status = deleteAccountFetch.status
             const message = await deleteAccountFetch.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200 && message === "VALID DATA") {
+            if (status === 200 && message === "VALID") {
 
             } else if (status === 400 && message === "INCORRECT PASSWORD") {
                 incorrectPasswordDeleteAccount.style.display = 'block';
@@ -190,12 +204,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
             } else {
                 someErrorDeleteAccount.style.display = 'block';
-
             };
 
         } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
+
+        } finally {
+            button.disabled = false;
         };
+        
     });
 });
