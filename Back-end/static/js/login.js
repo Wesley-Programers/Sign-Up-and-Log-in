@@ -13,9 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let emailForReset = document.getElementById("emailForReset");
     let leave = document.getElementById("leave");
 
-    let invalidEmail = document.getElementById("invalidEmail");
-    let link = document.getElementById("link");
-
     let dontHaveAccount = document.getElementById("dontHaveAccount");
 
     dontHaveAccount.addEventListener("click", () => {
@@ -35,7 +32,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
 
     form.addEventListener("submit", async (e) => {
+        let button = document.getElementById("signInButton");
+
         e.preventDefault();
+        button.disabled = true;
         const formData = new FormData(e.target)
 
         try {
@@ -50,17 +50,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchLogin.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200 && message === "VALID DATA") {
+            if (status === 200 && message === "VALID") {
                 incorrectName.style.display = 'none';
                 incorrectEmail.style.display = 'none';
                 incorrectPassword.style.display = 'none';
 
                 setTimeout(() => {
-                    window.location.href = '../HTML/mainAccount.html'
+                    window.location.href = '../html/mainAccount.html'
                 }, 300);
 
-            } else {
-                e.preventDefault();
+            } else if (status != 200) {
 
                 if (status === 409 && message === "WRONG EMAIL OR NAME") {
                     incorrectName.style.display = 'block';
@@ -85,13 +84,18 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
-        };
 
+        } finally {
+            button.disabled = false;
+        };
     });
 
     
     formEmailForResetPassword.addEventListener("submit", async (form) => {
-        // form.preventDefault();
+        let button = document.getElementById("button");
+
+        form.preventDefault();
+        button.disabled = true;
         const formData = new FormData(form.target);
 
         try {
@@ -105,8 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await resetFetch.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200) {
-                
+            if (status === 303 || status === 200) {
+            
             } else if (status === 400) {
                 alert("INVALID EMAIL");
                 invalidEmail.style.display = 'block';
@@ -115,8 +119,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
+
+        } finally {
+            button.disabled = false;
         };
-
     });
-
 });
