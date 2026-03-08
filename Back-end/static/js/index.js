@@ -9,9 +9,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let form = document.getElementById("form-sign-up");
 
-
     form.addEventListener("submit", async (form) => {
+        let button = document.getElementById("send");
+
         form.preventDefault();
+        button.disabled = true;
 
         const formData = new FormData(form.target)
         let thisNameAlreadyExists = document.getElementById('nameAlreadyExits');
@@ -29,14 +31,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchAqui.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 201 && message === "VALID DATA") {
-                
+            if (status === 201 && message === "VALID") {
                 setTimeout(() => {
-                    window.location.href = '../HTML/mainAccount.html'
+                    window.location.href = '../html/mainAccount.html'
                 }, 500);
                 
             } else {
-                form.preventDefault();
 
                 if (status === 400 && message === "NAME ALREADY EXISTS") {
                     thisNameAlreadyExists.style.display = 'block';  
@@ -55,8 +55,10 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch ( error ) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
+
+        } finally {
+            button.disabled = false;
         };
 
     });
-
 });
