@@ -4,28 +4,35 @@ DELIMITER //
 
 CREATE PROCEDURE login_limit (
     IN check_the_email VARCHAR(120),
-    OUT check_if_is_blocked BOOLEAN
+    IN check_the_name VARCHAR(50),
+    IN success BOOLEAN
 )
 
 BEGIN
+
     DECLARE attempts INT;
-    DECLARE check_the_limit INT DEFAULT 5;
-    DECLARE check_the_window INT DEFAULT 10;
 
-    SELECT COUNT(*) INTO attempts
-    FROM login_attempts
-    WHERE email = check_the_email
-        AND success = 0
-        AND attempt_in > NOW() - INTERVAL check_the_window MINUTE;
+    IF success THEN
+        DELETE FROM login_attempts
+        WHERE (email = check_the_email OR name = check_the_name);
+        SELECT FALSE AS check_the_block;
 
-    IF attempts >= check_the_limit THEN
-        SET check_if_is_blocked = TRUE;
     ELSE
-        SET check_if_is_blocked = FALSE;
-        INSERT INTO login_attempts(email, success) VALUES (check_the_email, 0);
-    END IF;
+        INSERT INTO login_attempts (email, name, success, attempt_in)
+        VALUES (check_the_email, check_the_name, 1, NOW());
+        DELETE FROM login_attempts
+        WHERE attempt_in < NOW() - INTERVAL 1 DAY;
+        SELECT COUNT(*) INTO attempts
+        FROM login_attempts
+        WHERE (email = check_the_email OR name = check_the_name)
+            AND success = 0
+            AND attempt_in > NOW() - INTERVAL 1 HOUR
 
-    DELETE FROM login_attempts WHERE attempt_in < NOW() - INTERVAL 24 HOUR;
+        IF attempts >= 5 THEN
+            SELECT TRUE AS check_the_block;
+        ELSE
+            SELECT FALSE AS check_the_block;
+        END IF;
 
 END //
 
