@@ -113,7 +113,22 @@ func (register *Register) RegisterFunction(ctx context.Context, name, email, pas
 
 
 func (verifyLogin *VerifyLogin) VerifyLoginFunction(ctx context.Context, name, email, password string) error {
-	return verifyLogin.Repository.VerifyLogin(ctx, name, email, password)
+	err, hash, attempts := verifyLogin.Repository.VerifyLogin(ctx, name, email, password)
+	if err != nil {
+		return err
+	}
+
+	if attempts >= 5 {
+		return errors.New("A LOT OF ATTEMPTS")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if err != nil {
+		repository.InsertIntoLoginAttempts(ctx, name, email)
+		return errors.New("WRONG PASSWORD")
+	}
+	
+	return nil
 }
 
 
