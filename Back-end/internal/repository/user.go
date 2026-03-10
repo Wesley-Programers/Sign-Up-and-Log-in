@@ -94,20 +94,22 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 }
 
 
-func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, email, password string) error {
+func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, email, password string) (error, string, int) {
 
 	var passwordHash string
+	var attempts int
+
 	err := verifyLogin.Database.QueryRowContext(ctx, "SELECT password FROM users WHERE name = ? OR email = ?", name, email).Scan(&passwordHash)
 	if err != nil {
-		return errors.New("WRONG EMAIL OR NAME")
+		return errors.New("WRONG EMAIL OR NAME"), "", 0
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(password))
+	err = verifyLogin.Database.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_attempts WHERE (email = ? OR name = ?) AND attempt_in > NOW() - INTERVAL 1 HOUR", email, name).Scan(&attempts)
 	if err != nil {
-		return errors.New("WRONG PASSWORD")
+		return err, "", 0
 	}
 
-	return nil
+	return nil, passwordHash, attempts
 }
 
 
@@ -133,8 +135,10 @@ func (changeName *ChangeNameStruct) ChangeName(ctx context.Context, currentName,
 
 	} else if !exist {
 		return errors.New("NAME DOES NOT EXIST")
+		
 	} else if currentName == newName {
 		return errors.New("NEW NAME IS NOT DIFFERENT")
+
 	} else {
 		return errors.New("SOME ERROR")
 	}
@@ -179,12 +183,16 @@ func (changeEmail *ChangeEmailStruct) ChangeEmail(ctx context.Context, currentEm
 
 	} else if !exist {
 		return errors.New("EMAIL DOES NOT EXIST")
+
 	} else if newEmail != confirmNewEmail {
 		return errors.New("ERROR")
+
 	} else if passwordHash != nil {
 		return errors.New("INCORRECT PASSWORD")
+
 	} else if newEmail == currentEmail {
 		return errors.New("ERROR")
+
 	} else {
 		return errors.New("SOME ERROR")
 	}
@@ -446,5 +454,21 @@ func InsertInto(ctx context.Context, userID int, token string, expiresAt time.Ti
 	if err != nil {
 		return fmt.Errorf("Repository error: %w", err)
 	}
+	return nil
+}
+
+
+func InsertIntoLoginAttempts(ctx context.Context, name, email string) error {
+
+	_, err := database.Connect().ExecContext(ctx, "DELETE FROM login_attempts WHERE (email = ? OR name = ?) AND attempt_in < NOW() - INTERVAL 1 DAY", email, name)
+	if err != nil {
+		return err
+	}
+
+	_, err = database.Connect().ExecContext(ctx, "INSERT INTO login_attempts(name, email, attempt_in, success) VALUES(?, ?, NOW(), FALSE)", name, email)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
