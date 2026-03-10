@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS login_attempts;
+DROP TABLE IF EXISTS attempts;
+DROP TABLE IF EXISTS reset_password;
