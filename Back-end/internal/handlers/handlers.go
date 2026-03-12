@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"html/template"
+	"errors"
 	"log"
 	"net/http"
-	"html/template"
-	
-	"index/Back-end/internal/ui"
+
+	"index/Back-end/internal/domain"
 	"index/Back-end/internal/service"
+	"index/Back-end/internal/ui"
 )
 
 type RegisterHandler struct {
@@ -105,14 +107,20 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 	
 		err := handler.Service.RegisterFunction(ctx, name, email, password)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			switch {
+			case errors.Is(err, domain.ErrEmailAlreadyExist):
+				http.Error(w, err.Error(), http.StatusConflict)
+
+			case errors.Is(err, domain.ErrInvaliData):
+				http.Error(w, err.Error(), http.StatusBadRequest)
+
+			default:
+				log.Printf("Unexpected error: %v", err)
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+			}
 			return
-	
-		} else {
-			w.WriteHeader(http.StatusCreated)
-			w.Write([]byte("VALID"))
-			log.Println("SUCCESS")
 		}
+		w.WriteHeader(http.StatusCreated)
 	
 	} else {
 		log.Println("ERROR")
@@ -123,7 +131,6 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 
 func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -241,7 +248,6 @@ func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter,
 
 func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -262,22 +268,20 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 		err, token := requestHandler.Service.RequestFunction(ctx, email)
 		if err == nil {
 			log.Println("SUCCESS")
+			http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
+			return
 			
 		} else {
 			log.Println("ERROR: ", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		
-		http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
-		return
 	}
 }
 
 
 func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
 	
-	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -357,7 +361,6 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 
 func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Origin", "http://127.0.0.1:5500")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "text/html; charset=utf-8")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
