@@ -1,13 +1,16 @@
 package repository
 
-import "context"
+import (
+	"context"
+	"index/Back-end/internal/domain"
+)
 
 type User interface {
 	Register(ctx context.Context, name, email, password string) error
 }
 
 type LoginUser interface {
-	VerifyLogin(ctx context.Context, name, email, password string) (error, bool, string)
+	VerifyLogin(ctx context.Context, name, email, password string) (error, string, int)
 }
 
 type ChangeName interface {
@@ -15,7 +18,8 @@ type ChangeName interface {
 }
 
 type ChangeEmail interface {
-	ChangeEmail(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error
+	GetID(ctx context.Context, id int) (*domain.User, error)
+	UpdateEmail(ctx context.Context, user *domain.User) error
 }
 
 type Request interface {
