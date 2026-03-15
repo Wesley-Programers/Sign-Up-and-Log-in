@@ -135,11 +135,15 @@ document.addEventListener("DOMContentLoaded", () => {
         a.preventDefault();
         button.disabled = true;
         const formDataEmail = new FormData(a.target);
+        const data = Object.fromEntries(formDataEmail.entries());
 
         try {
             const fetchChangeEmail = await fetch("http://127.0.0.1:8000/email", {
                 method: "POST",
-                body: formDataEmail,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(data),
             });
 
             const status = fetchChangeEmail.status
