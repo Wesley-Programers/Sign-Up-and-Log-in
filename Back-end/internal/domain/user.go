@@ -2,38 +2,64 @@ package domain
 
 import (
 	"strings"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID int
-	Name string
-	Email string
+	id int
+	name string
+	email string
 	PasswordHash string
 }
 
-func (user *User) ChangeEmail(currentEmail, newEmail, confirmEmail string) error {
-	currentEmail = strings.ToLower(strings.TrimSpace(currentEmail))
-	newEmail = strings.ToLower(strings.TrimSpace(newEmail))
-	confirmEmail = strings.ToLower(strings.TrimSpace(confirmEmail))
+func (user *User) ID() int { return user.id }
+func (user *User) Name() string { return user.name }
+func (user *User) Email() string { return user.email }
 
-	if newEmail == user.Email {
-		return ErrEmailIsTheSame
-	}
-
-	if newEmail != confirmEmail {
+func (user *User) ChangeEmail(currentEmail, newEmail, confirmNewEmail string) error {
+	
+	if !strings.EqualFold(currentEmail, user.email) {
 		return ErrEmailMismatch
 	}
 
-	if newEmail == "" {
-		return ErrInvalidData
+	if strings.EqualFold(newEmail, user.email) {
+		return ErrEmailIsTheSame
 	}
 
-	user.Email = newEmail
+	user.email = strings.ToLower(newEmail)
+	return nil
+}
+
+func (user *User) ChangeName(currentName, newName, confirmNewEmail string) error {
+
+	if !strings.EqualFold(currentName, user.name) {
+		return ErrUserNotFound
+	}
+
+	if strings.EqualFold(newName, user.name) {
+		return ErrNameIsTheSame
+	}
+
+	user.name = strings.ToLower(newName)
 	return nil
 }
 
 func (user *User) PasswordValid(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
-	return err == nil
+	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)) == nil
+}
+
+func Restore(id int, email, passwordHash string) *User {
+	return &User{
+		id: id,
+		email: email,
+		PasswordHash: passwordHash,
+	}
+}
+
+func RestoreName(id int, name string) *User {
+	return &User{
+		id: id,
+		name: name,
+	}
 }
