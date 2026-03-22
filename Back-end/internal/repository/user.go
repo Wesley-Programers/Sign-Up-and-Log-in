@@ -6,11 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
 	"index/Back-end/internal/database"
+	"index/Back-end/internal/domain"
 
+	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -86,11 +89,20 @@ var (
 )
 
 func (register *RegisterStruct) Register(ctx context.Context, name, email, password string) error {
-	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", name, email, password)
+	cleanName := strings.TrimSpace(name)
+	cleanEmail := strings.TrimSpace(email)
+
+	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", cleanName, cleanEmail, password)
 	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
+		var mySQLError *mysql.MySQLError
+		if errors.As(err, &mySQLError) {
+			if mySQLError.Number == 1062 {
+				return domain.ErrEmailAlreadyExist
+			}
+		}
+		return fmt.Errorf("Repository error: failed to insert user: %w", err)
 	}
-	return err
+	return nil
 }
 
 
@@ -98,111 +110,76 @@ func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, ema
 
 	var passwordHash string
 	var attempts int
+	cleanName := strings.TrimSpace(name)
+	cleanEmail := strings.TrimSpace(email)
 
-	err := verifyLogin.Database.QueryRowContext(ctx, "SELECT password FROM users WHERE name = ? OR email = ?", name, email).Scan(&passwordHash)
+	err := verifyLogin.Database.QueryRowContext(ctx, "SELECT password FROM users WHERE name = ? OR email = ?", cleanName, cleanEmail).Scan(&passwordHash)
 	if err != nil {
-		return errors.New("WRONG EMAIL OR NAME"), "", 0
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ErrUserNotFound, "", 0
+		}
+		return domain.ErrInternal, "", 0
 	}
 
 	err = verifyLogin.Database.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_attempts WHERE (email = ? OR name = ?) AND attempt_in > NOW() - INTERVAL 1 HOUR", email, name).Scan(&attempts)
 	if err != nil {
-		return err, "", 0
+		return fmt.Errorf("Repository error: %w", err), "", 0
 	}
 
 	return nil, passwordHash, attempts
 }
 
 
-func (changeName *ChangeNameStruct) ChangeName(ctx context.Context, currentName, newName string) error {
-	var exist bool
-
-	tx, err := changeName.Database.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE name = ?)", currentName).Scan(&exist)
-	if err != nil {
-		return err
+func (changeName *ChangeNameStruct) GetID(ctx context.Context, id int) (*domain.User, error) {
+	var test struct {
+		ID int
+		Name string
 	}
 
-	if newName != "" && exist && currentName != newName {
-		_, err = tx.ExecContext(ctx, "UPDATE users SET name = ? WHERE name = ?", newName, currentName)
-		if err != nil {
-			return fmt.Errorf("Repository error: %w", err)
+	query := "SELECT id, name FROM users WHERE id = ?"
+	err := changeName.Database.QueryRowContext(ctx, query, id).Scan(&test.ID, &test.Name)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
 		}
-
-	} else if !exist {
-		return errors.New("NAME DOES NOT EXIST")
-		
-	} else if currentName == newName {
-		return errors.New("NEW NAME IS NOT DIFFERENT")
-
-	} else {
-		return errors.New("SOME ERROR")
+		return nil, err
 	}
 
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
-	}
-
-	return nil
+	return domain.RestoreName(test.ID, test.Name), nil
 }
 
 
-func (changeEmail *ChangeEmailStruct) ChangeEmail(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error {
+func (changeName *ChangeNameStruct) UpdateName(ctx context.Context, user *domain.User) error {
+	query := "UPDATE users SET name = ? WEHRE id = ?"
+	_, err := changeName.Database.ExecContext(ctx, query, user.Name(), user.ID())
+	return err
+}
 
-	tx, err := changeEmail.Database.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
-	var exist bool
-	var verifyPassword string
-
-	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)", currentEmail).Scan(&exist)
-	if err != nil {
-		return err
+func (changeEmail *ChangeEmailStruct) GetID(ctx context.Context, id int) (*domain.User, error) {
+	var test struct {
+		ID int
+		Email string
+		PasswordHash string
 	}
 
-	err = tx.QueryRowContext(ctx, "SELECT password FROM users WHERE email = ?", currentEmail).Scan(&verifyPassword)
+	query := "SELECT id, email, password FROM users WHERE id = ?"
+	err := changeEmail.Database.QueryRowContext(ctx, query, id).Scan(&test.ID, &test.Email, &test.PasswordHash)
 	if err != nil {
-		return err
-	}
-
-	passwordHash := bcrypt.CompareHashAndPassword([]byte(verifyPassword), []byte(password))
-
-	if exist && newEmail == confirmNewEmail && passwordHash == nil && newEmail != currentEmail {
-		_, err = tx.ExecContext(ctx, "UPDATE users SET email = ? WHERE email = ?", newEmail, currentEmail)
-		if err != nil {
-			return fmt.Errorf("Repository error: %w", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
 		}
-
-	} else if !exist {
-		return errors.New("EMAIL DOES NOT EXIST")
-
-	} else if newEmail != confirmNewEmail {
-		return errors.New("ERROR")
-
-	} else if passwordHash != nil {
-		return errors.New("INCORRECT PASSWORD")
-
-	} else if newEmail == currentEmail {
-		return errors.New("ERROR")
-
-	} else {
-		return errors.New("SOME ERROR")
+		return nil, err
 	}
+	
+	return domain.Restore(test.ID, test.Email, test.PasswordHash), nil
+}
 
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
-	}
 
-	return nil
+func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *domain.User) error {
+	query := "UPDATE users SET email = ? WHERE id = ?"
+	_, err := changeEmail.Database.ExecContext(ctx, query, user.Email(), user.ID())
+	return err
 }
 
 
@@ -469,6 +446,5 @@ func InsertIntoLoginAttempts(ctx context.Context, name, email string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
