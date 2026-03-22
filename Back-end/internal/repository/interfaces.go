@@ -14,7 +14,8 @@ type LoginUser interface {
 }
 
 type ChangeName interface {
-	ChangeName(ctx context.Context, currentName, newName string) error
+	GetID(ctx context.Context, id int) (*domain.User, error)
+	UpdateName(ctx context.Context, user *domain.User) error
 }
 
 type ChangeEmail interface {
