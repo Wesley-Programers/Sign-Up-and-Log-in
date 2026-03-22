@@ -1,14 +1,18 @@
 package handlers
 
 import (
-	"html/template"
+	"encoding/json"
 	"errors"
+	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 
 	"index/Back-end/internal/domain"
 	"index/Back-end/internal/service"
 	"index/Back-end/internal/ui"
+	"index/Back-end/internal/web"
+	"index/Back-end/internal/middleware"
 )
 
 type RegisterHandler struct {
@@ -84,13 +88,23 @@ func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
 	}
 }
 
+
+type ChangeNameRequest struct {
+	CurrentName string `json:"currentName" validate:"required,name"`
+	NewName string `json:"newName" validate:"required,name"`
+	ConfirmNewName string `json:"confirmNewName" validate:"eqfield=NewName"`
+}
+
+type ChangeEmailRequest struct {
+	CurrentEmail string `json:"currentEmail" validate:"required,email"`
+	NewEmail string `json:"newEmail" validate:"required,email"`
+	ConfirmNewEmail string `json:"confirmNewEmail" validate:"eqfield=NewEmail"`
+	Password string `json:"password" validate:"required"`
+}
+
 var tmpl = template.Must(template.ParseFS(ui.Files, "templates/reset.html"))
 
 func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -109,18 +123,18 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 		if err != nil {
 			switch {
 			case errors.Is(err, domain.ErrEmailAlreadyExist):
-				http.Error(w, err.Error(), http.StatusConflict)
+				web.Error(w, http.StatusConflict, "Email already exists", err)
 
-			case errors.Is(err, domain.ErrInvaliData):
-				http.Error(w, err.Error(), http.StatusBadRequest)
+			case errors.Is(err, domain.ErrInvalidData):
+				web.Error(w, http.StatusBadRequest, "Invalid input", err)
 
 			default:
 				log.Printf("Unexpected error: %v", err)
-				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				web.Error(w, http.StatusInternalServerError, "Internal server error", err)
 			}
 			return
 		}
-		w.WriteHeader(http.StatusCreated)
+		web.Json(w, http.StatusOK, map[string]string{"message": "success"})
 	
 	} else {
 		log.Println("ERROR")
@@ -130,10 +144,6 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 
 
 func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -147,20 +157,35 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 		nameOrEmail := r.FormValue("nameEmail")
 		password := r.FormValue("passwordLog")
 
+		futureID := 7
+
 		ctx := r.Context()
 	
 		err := login.Service.VerifyLoginFunction(ctx, nameOrEmail, nameOrEmail, password)
-		if err == nil {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID"))
-			log.Println("SUCCESS")
-	
-		} else {
-			log.Println("ERROR: ", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if err != nil {
+			switch {
+			case errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrInvalidCredentials):
+				web.Error(w, http.StatusUnauthorized, "Email, name or password wrong", err)
+
+			case errors.Is(err, domain.ErrInternal):
+				web.Error(w, http.StatusInternalServerError, "Internal server error", err)
+
+			default:
+				log.Printf("Unexpected error: %v", err)
+				web.Error(w, http.StatusInternalServerError, "Unexpected error", err)
+			}
 			return
 		}
-	
+
+		tokenJwtString, err := service.TokenJWT(futureID)
+		if err != nil {
+			web.Error(w, http.StatusInternalServerError, "ERROR TRYING TO CREATE A TOKEN", err)
+			return
+		}
+
+		log.Println("SUCCESS")
+		web.Json(w, http.StatusOK, map[string]string{"token": tokenJwtString})
+
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
@@ -169,10 +194,6 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 
 
 func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -181,76 +202,97 @@ func (changeName *ChangeNameHandler) ChangeNameHandler(w http.ResponseWriter, r 
 
 	if r.Method == http.MethodPost {
 
-		currentName := r.FormValue("currentName")
-		newName := r.FormValue("newName")
-
-		ctx := r.Context()
-	
-		err := changeName.Service.ChangeNameFunction(ctx, currentName, newName)
-		if err == nil {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID"))
-			log.Println("SUCCESS")
-	
-		} else {
-			log.Println("ERROR: ", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		var req ChangeNameRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			web.Error(w, http.StatusBadRequest, "Invalid request", err)
 			return
 		}
+
+		idString, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		idContext, err := strconv.Atoi(idString)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		input := service.ChangeNameData{
+			ID: idContext,
+			CurrentName: req.CurrentName,
+			NewName: req.NewName,
+			ConfirmNewName: req.ConfirmNewName,
+		}
+
+		if err := changeName.Service.ChangeNameFunction(r.Context(), input); err != nil {
+			MapServiceError(w, err)
+			return
+		}
+
+		web.Json(w, http.StatusOK, map[string]string{"message": "success"})
 
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		return
 	}
 }
 
 
 func (changeEmail *ChangeEmailHandler) ChangeEmailHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	log.SetFlags(log.Lshortfile)
-
 	if r.Method == http.MethodPost {
 
-		currentEmail := r.FormValue("currentEmail")
-		newEmail := r.FormValue("newEmail")
-		confirmNewEmail := r.FormValue("confirmNewEmail")
-		password := r.FormValue("currentPassword")
-
-		ctx := r.Context()
+		var req ChangeEmailRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			web.Error(w, http.StatusBadRequest, "Invalid request", err)
+			return
+		}
 	
-		err := changeEmail.Service.ChangeEmailFunction(ctx, currentEmail, newEmail, confirmNewEmail, password)
-		if err == nil {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("VALID"))
-			log.Println("SUCCESS")
-	
-		} else {
-			log.Println("ERROR: ", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		idString, ok := r.Context().Value(middleware.UserIDKey).(string)
+		if !ok {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
+		idContext, err := strconv.Atoi(idString)
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		input := service.ChangeEmailData{
+			ID: idContext,
+			CurrentEmail: req.CurrentEmail,
+			NewEmail: req.NewEmail,
+			ConfirmNewEmail: req.ConfirmNewEmail,
+			Password: req.Password,
+		}
+	
+		if err := changeEmail.Service.ChangeEmailFunctionTest(r.Context(), input); err != nil {
+			MapServiceError(w, err)
+			return
+		}
+
+		web.Json(w, http.StatusOK, map[string]string{"message": "success"})
+
 	} else {
 		log.Println("ERROR")
-		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		http.Error(w, "Error", http.StatusMethodNotAllowed)
+		return
 	}
 }
 
 
 func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -281,10 +323,6 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 
 
 func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.ResponseWriter, r *http.Request) {
-	
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -322,10 +360,6 @@ func (resetPasswordHandler *ResetPasswordHandler) ResetPasswordHandler(w http.Re
 
 func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -361,10 +395,6 @@ func (deleteAccountHandler *DeleteAccountHandler) DeleteAccountHandler(w http.Re
 
 func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
 
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "text/html; charset=utf-8")
-	w.Header().Set("Access-Control-Allow-Credentials", "true")
-
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -376,6 +406,7 @@ func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r 
 
 	err := validToken.Service.ValidTokenFunction(ctx)
 	token := r.URL.Query().Get("token")
+	
 	if err == nil && token != "" {
 		w.WriteHeader(http.StatusOK)
 		tmpl.Execute(w, nil)
