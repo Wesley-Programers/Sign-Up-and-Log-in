@@ -5,22 +5,26 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"index/Back-end/internal/database"
 	"index/Back-end/internal/handlers"
+	"index/Back-end/internal/middleware"
 	"index/Back-end/internal/repository"
+	"index/Back-end/internal/security"
 	"index/Back-end/internal/service"
 
 	"github.com/joho/godotenv"
 )
 
-
 func main() {
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: file .env was not found")
+		log.Println("Warning: .env file was not found")
 	}
 	jwtKey := os.Getenv("JWT_KEY")
+
+	limiter := security.NewRedisLimiter("localhost:6379")
 
 	db := database.Connect()
 	defer db.Close()
@@ -28,7 +32,7 @@ func main() {
 
 	go service.StartToRemoverExpiredTokens(db)
 	mux := http.NewServeMux()
-	
+
 	repositoryRegister := repository.NewRegisterStruct(db)
 	serviceRegister := service.NewUserStruct(repositoryRegister)
 	handlerRegister := handlers.NewRegisterHanlder(serviceRegister)
@@ -61,15 +65,19 @@ func main() {
 	serviceValidToken := service.NewValidToken(repositoryValidToken)
 	handlerValidToken := handlers.NewValidTokenHandler(serviceValidToken)
 
-
 	mux.HandleFunc("/register", handlerRegister.RegisterHandler)
 	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
 
 	mux.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
 
-	getEnvMiddleware := handlers.AuthMiddleware(jwtKey)
-	mux.Handle("/email", getEnvMiddleware(http.HandlerFunc(handlerChangeEmail.ChangeEmailHandler)))
-	
+	handler := http.HandlerFunc(handlerChangeEmail.ChangeEmailHandler)
+	handlerWithMiddleware := middleware.Chain(
+		handler,
+		middleware.AuthMiddleware(jwtKey),
+		middleware.RateLimitMiddleware(limiter, 3, 24*time.Hour),
+	)
+	mux.HandleFunc("/email", handlerWithMiddleware.ServeHTTP)
+
 	mux.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
 	mux.HandleFunc("/reset", handlerRequest.RequestHandler)
@@ -77,9 +85,9 @@ func main() {
 
 	mux.HandleFunc("/valid", handlerValidToken.ValidTokenHandler)
 
-	testHandler := handlers.Recovery(mux)
-	middleware := handlers.CorsMiddleware(testHandler)
-	
+	handlersWithRecovery := middleware.Recovery(mux)
+	middleware := middleware.CorsMiddleware(handlersWithRecovery)
+
 	fmt.Println("SERVER OPEN WITH GOLANG")
 	http.ListenAndServe("127.0.0.1:8000", middleware)
 }
