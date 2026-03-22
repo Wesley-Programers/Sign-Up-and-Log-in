@@ -40,7 +40,7 @@
         <span id="link"></span>
         
 
-        <form id="formLogIn" action="http://127.0.0.1:8000/login" method="post">
+        <form id="formLogIn" method="post">
 
             <div id="div-sign-in">
                 <input type="text" id="inputNameEmail" required name="nameEmail" placeholder="Name or Email">
@@ -58,10 +58,10 @@
                 <span id="email">Enter your account email to reset your password</span>
                 <span id="leave">LEAVE</span>
 
-                <form action="http://127.0.0.1:8000/reset" method="post" id="formEmailForResetPassword">
+                <form method="post" id="formEmailForResetPassword" onsubmit="return false;">
                     <input type="text" required placeholder="Your email" name="email" id="inputEmailForResetPassword">
 
-                    <button type="submit">SEND</button>
+                    <button type="submit" id="button">SEND</button>
                 </form>
             </div>
 
