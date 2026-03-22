@@ -47,13 +47,17 @@ document.addEventListener("DOMContentLoaded", () => {
             })
 
             const status = fetchLogin.status
-            const message = await fetchLogin.text()
+            const message = await fetchLogin.json()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200 && message === "VALID") {
+            if (status === 200) {
                 incorrectName.style.display = 'none';
                 incorrectEmail.style.display = 'none';
                 incorrectPassword.style.display = 'none';
+
+                if (message.token) {
+                    localStorage.setItem("jwt_key", message.token);
+                };
 
                 setTimeout(() => {
                     window.location.href = '../html/mainAccount.html'
