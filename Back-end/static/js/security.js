@@ -130,6 +130,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     formEmail.addEventListener("submit", async (a) => {
+
+        const tokenKey = localStorage.getItem("jwt_key");
         let button = document.getElementById("saveNewEmail");
 
         a.preventDefault();
@@ -141,8 +143,10 @@ document.addEventListener("DOMContentLoaded", () => {
             const fetchChangeEmail = await fetch("http://127.0.0.1:8000/email", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${tokenKey}`
                 },
+                credentials: "include",
                 body: JSON.stringify(data),
             });
 
@@ -150,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const message = await fetchChangeEmail.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "VALID") {
+            if (status === 200) {
                 alert("EVERYTHING OK");
                 window.location.reload();
 
