@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 	"unicode"
@@ -13,8 +14,10 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 
+	"index/Back-end/internal/domain"
 	"index/Back-end/internal/repository"
 
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -92,6 +95,20 @@ func NewValidToken(repository repository.ValidToken) *ValidToken {
 	}
 }
 
+type ChangeEmailData struct {
+	ID int
+	CurrentEmail string
+	NewEmail string
+	ConfirmNewEmail string
+	Password string
+}
+type ChangeNameData struct {
+	ID int
+	CurrentName string
+	NewName string
+	ConfirmNewName string
+}
+
 var (
 	test string
 	lock sync.Mutex
@@ -108,7 +125,12 @@ func (register *Register) RegisterFunction(ctx context.Context, name, email, pas
 		return err
 	}
 
-	return register.Repository.Register(ctx, name, email, string(hash))
+	err = register.Repository.Register(ctx, name, email, string(hash))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 
@@ -125,20 +147,44 @@ func (verifyLogin *VerifyLogin) VerifyLoginFunction(ctx context.Context, name, e
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
 		repository.InsertIntoLoginAttempts(ctx, name, email)
-		return errors.New("WRONG PASSWORD")
+		return domain.ErrInvalidCredentials
 	}
 	
 	return nil
 }
 
 
-func (changeName *ChangeName) ChangeNameFunction(ctx context.Context, currentName, newName string) error {
-	return changeName.Repository.ChangeName(ctx, currentName, newName)
+func (changeName *ChangeName) ChangeNameFunction(ctx context.Context, input ChangeNameData) error {
+	// return changeName.Repository.ChangeName(ctx, currentName, newName)
+	user, err := changeName.Repository.GetID(ctx, input.ID)
+	if err != nil {
+		return err
+	}
+
+	if err := user.ChangeName(input.CurrentName, input.NewName, input.ConfirmNewName); err != nil {
+		return err
+	}
+
+	return changeName.Repository.UpdateName(ctx, user)
 }
 
 
-func (changeEmail *ChangeEmail) ChangeEmailFunction(ctx context.Context, currentEmail, newEmail, confirmNewEmail, password string) error {
-	return changeEmail.Repository.ChangeEmail(ctx, currentEmail, newEmail, confirmNewEmail, password)
+func (changeEmail *ChangeEmail) ChangeEmailFunctionTest(ctx context.Context, input ChangeEmailData) error {
+
+	user, err := changeEmail.Repository.GetID(ctx, input.ID)
+	if err != nil {
+		return err
+	}
+
+	if !user.PasswordValid(input.Password) {
+		return domain.ErrInvalidPassword
+	}
+
+	if err := user.ChangeEmail(input.CurrentEmail, input.NewEmail, input.ConfirmNewEmail); err != nil {
+		return err
+	}
+
+	return changeEmail.Repository.UpdateEmail(ctx, user)
 }
 
 
@@ -291,4 +337,17 @@ func StartToRemoverExpiredTokens(database *sql.DB) {
 func tokenHash(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
+}
+
+
+func TokenJWT(userID int) (string, error) {
+	claims := jwt.MapClaims{
+		"sub": userID,
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
+		"iat": time.Now().Unix(),
+	}
+
+	tokenJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	secretKey := os.Getenv("JWT_KEY")
+	return tokenJwt.SignedString([]byte(secretKey))
 }
