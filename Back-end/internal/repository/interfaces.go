@@ -10,7 +10,7 @@ type User interface {
 }
 
 type LoginUser interface {
-	VerifyLogin(ctx context.Context, name, email, password string) (error, string, int)
+	GetByCredentials(ctx context.Context, login string) (*domain.User, error)
 }
 
 type ChangeName interface {
