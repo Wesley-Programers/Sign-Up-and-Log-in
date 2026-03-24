@@ -7,7 +7,7 @@ import (
 	"index/Back-end/internal/security"
 )
 
-func RateLimitMiddleware(limiter *security.RedisLimiter, maxAttempts int, window time.Duration) func(http.Handler) http.Handler {
+func RateLimitMiddleware(limiter *security.RedisLimiter, keyPrefix string, maxAttempts int, duration time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -18,9 +18,9 @@ func RateLimitMiddleware(limiter *security.RedisLimiter, maxAttempts int, window
 			}
 
 			ctx := r.Context()
-			key := "change-email:" + userID
+			key := keyPrefix + userID
 			
-			allowed, err := limiter.CheckLimit(ctx, key, 3, 24*time.Hour)
+			allowed, err := limiter.CheckLimit(ctx, key, maxAttempts, duration)
 			if err != nil {
 				http.Error(w, "Internal server error", http.StatusInternalServerError)
 				return
