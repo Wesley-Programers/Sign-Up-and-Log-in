@@ -37,17 +37,27 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         button.disabled = true;
         const formData = new FormData(e.target)
+        const data = Object.fromEntries(formData.entries());
 
         try {
 
             const fetchLogin = await fetch("http://127.0.0.1:8000/login", {
                 method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
                 credentials: "include",
-                body: formData
+                body: JSON.stringify(data),
             })
 
+            if (!fetchLogin.ok) {
+                const errorText = await fetchLogin.text();
+                console.log("error: ", errorText);
+                return;
+            }
+
             const status = fetchLogin.status
-            const message = await fetchLogin.json()
+            const message = await fetchLogin.json();
             alert(`Status: ${status} Message: ${message}`);
 
             if (status === 200) {
