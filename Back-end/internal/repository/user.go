@@ -97,7 +97,7 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 		var mySQLError *mysql.MySQLError
 		if errors.As(err, &mySQLError) {
 			if mySQLError.Number == 1062 {
-				return domain.ErrEmailAlreadyExist
+				return domain.ErrEmailAlreadyExists
 			}
 		}
 		return fmt.Errorf("Repository error: failed to insert user: %w", err)
@@ -106,27 +106,19 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 }
 
 
-func (verifyLogin *VerifyLoginStruct) VerifyLogin(ctx context.Context, name, email, password string) (error, string, int) {
+func (loginStruct *VerifyLoginStruct) GetByCredentials(ctx context.Context, login string) (*domain.User, error) {
+	var u domain.User
 
-	var passwordHash string
-	var attempts int
-	cleanName := strings.TrimSpace(name)
-	cleanEmail := strings.TrimSpace(email)
-
-	err := verifyLogin.Database.QueryRowContext(ctx, "SELECT password FROM users WHERE name = ? OR email = ?", cleanName, cleanEmail).Scan(&passwordHash)
+	query := "SELECT id, name, email, password FROM users WHERE name = ? OR email = ? LIMIT 1"
+	err := loginStruct.Database.QueryRowContext(ctx, query, login, login).Scan(&u.Id, &u.Name, &u.Email, &u.PasswordHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.ErrUserNotFound, "", 0
+			return nil, domain.ErrUserNotFound
 		}
-		return domain.ErrInternal, "", 0
+		return nil, err
 	}
 
-	err = verifyLogin.Database.QueryRowContext(ctx, "SELECT COUNT(*) FROM login_attempts WHERE (email = ? OR name = ?) AND attempt_in > NOW() - INTERVAL 1 HOUR", email, name).Scan(&attempts)
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err), "", 0
-	}
-
-	return nil, passwordHash, attempts
+	return &u, nil
 }
 
 
@@ -151,7 +143,7 @@ func (changeName *ChangeNameStruct) GetID(ctx context.Context, id int) (*domain.
 
 func (changeName *ChangeNameStruct) UpdateName(ctx context.Context, user *domain.User) error {
 	query := "UPDATE users SET name = ? WEHRE id = ?"
-	_, err := changeName.Database.ExecContext(ctx, query, user.Name(), user.ID())
+	_, err := changeName.Database.ExecContext(ctx, query, user.NAME(), user.ID())
 	return err
 }
 
@@ -178,7 +170,7 @@ func (changeEmail *ChangeEmailStruct) GetID(ctx context.Context, id int) (*domai
 
 func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *domain.User) error {
 	query := "UPDATE users SET email = ? WHERE id = ?"
-	_, err := changeEmail.Database.ExecContext(ctx, query, user.Email(), user.ID())
+	_, err := changeEmail.Database.ExecContext(ctx, query, user.EMAIL(), user.ID())
 	return err
 }
 
