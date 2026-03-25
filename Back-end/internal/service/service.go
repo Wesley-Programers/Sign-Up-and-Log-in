@@ -108,6 +108,11 @@ type ChangeNameData struct {
 	NewName string
 	ConfirmNewName string
 }
+type LoginData struct {
+	Name string
+	Email string
+	Password string
+}
 
 var (
 	test string
@@ -134,28 +139,32 @@ func (register *Register) RegisterFunction(ctx context.Context, name, email, pas
 }
 
 
-func (verifyLogin *VerifyLogin) VerifyLoginFunction(ctx context.Context, name, email, password string) error {
-	err, hash, attempts := verifyLogin.Repository.VerifyLogin(ctx, name, email, password)
-	if err != nil {
-		return err
+func (login *VerifyLogin) VerifyLoginFunction(ctx context.Context, input LoginData) (error, int) {
+
+	identifier := input.Email
+	if identifier == "" {
+		identifier = input.Name
 	}
 
-	if attempts >= 5 {
-		return errors.New("A LOT OF ATTEMPTS")
+	if identifier == "" {
+		return domain.ErrInvalidData, 0
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	user, err := login.Repository.GetByCredentials(ctx, identifier)
 	if err != nil {
-		repository.InsertIntoLoginAttempts(ctx, name, email)
-		return domain.ErrInvalidCredentials
+		return domain.ErrInvalidCredentials, 0
 	}
 	
-	return nil
+	if err := user.PasswordValid(input.Password); err != nil {
+		return domain.ErrInvalidPassword, 0
+	}
+
+	return nil, user.Id
 }
 
 
 func (changeName *ChangeName) ChangeNameFunction(ctx context.Context, input ChangeNameData) error {
-	// return changeName.Repository.ChangeName(ctx, currentName, newName)
+	
 	user, err := changeName.Repository.GetID(ctx, input.ID)
 	if err != nil {
 		return err
@@ -173,10 +182,10 @@ func (changeEmail *ChangeEmail) ChangeEmailFunctionTest(ctx context.Context, inp
 
 	user, err := changeEmail.Repository.GetID(ctx, input.ID)
 	if err != nil {
-		return err
+		return domain.ErrUserNotFound
 	}
 
-	if !user.PasswordValid(input.Password) {
+	if err := user.PasswordValid(input.Password); err != nil {
 		return domain.ErrInvalidPassword
 	}
 
