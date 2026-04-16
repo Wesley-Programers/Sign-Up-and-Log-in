@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 	
-	// "net/http"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -24,14 +23,23 @@ func NewRedisLimiter(addr string) *RedisLimiter {
 func (rl *RedisLimiter) CheckLimit(ctx context.Context, key string, maxAttempts int, window time.Duration) (bool, error) {
 	fullKey := fmt.Sprintf("rl:%s", key)
 
-	count, err := rl.client.Incr(ctx, fullKey).Result()
+	script := `
+		local current = redis.call("INCR", KEYS[1])
+		if current == 1 then
+			redis.call("PEXPIRE", KEYS[1], ARGV[1])
+		end
+		return current`
+
+	result, err := rl.client.Eval(ctx, script, []string{fullKey}, window.Milliseconds()).Result()
 	if err != nil {
 		return false, err
 	}
 
-	if count == 1 {
-		rl.client.Expire(ctx, fullKey, window)
-	}
-
+	count := result.(int64)
 	return int(count) <= maxAttempts, nil
+}
+
+func (rl *RedisLimiter) ResetLimit(ctx context.Context, key string) error {
+	fullKey := fmt.Sprintf("rl:%s", key)
+	return rl.client.Del(ctx, fullKey).Err()
 }
