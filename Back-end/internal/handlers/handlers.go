@@ -7,12 +7,14 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"index/Back-end/internal/domain"
+	"index/Back-end/internal/middleware"
+	"index/Back-end/internal/security"
 	"index/Back-end/internal/service"
 	"index/Back-end/internal/ui"
 	"index/Back-end/internal/web"
-	"index/Back-end/internal/middleware"
 )
 
 type RegisterHandler struct {
@@ -21,6 +23,7 @@ type RegisterHandler struct {
 
 type LoginHandler struct {
 	Service *service.VerifyLogin
+	Limiter *security.RedisLimiter
 }
 
 type ChangeNameHandler struct {
@@ -102,6 +105,11 @@ type ChangeEmailRequest struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type LoginRequest struct {
+	NameOrEmail string `json:"nameOrEmail" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
+
 var tmpl = template.Must(template.ParseFS(ui.Files, "templates/reset.html"))
 
 func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +130,7 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 		err := handler.Service.RegisterFunction(ctx, name, email, password)
 		if err != nil {
 			switch {
-			case errors.Is(err, domain.ErrEmailAlreadyExist):
+			case errors.Is(err, domain.ErrEmailAlreadyExists):
 				web.Error(w, http.StatusConflict, "Email already exists", err)
 
 			case errors.Is(err, domain.ErrInvalidData):
@@ -150,34 +158,41 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	log.SetFlags(log.Lshortfile)
-
 	if r.Method == http.MethodPost {
 
-		nameOrEmail := r.FormValue("nameEmail")
-		password := r.FormValue("passwordLog")
-
-		futureID := 7
-
-		ctx := r.Context()
-	
-		err := login.Service.VerifyLoginFunction(ctx, nameOrEmail, nameOrEmail, password)
-		if err != nil {
-			switch {
-			case errors.Is(err, domain.ErrUserNotFound), errors.Is(err, domain.ErrInvalidCredentials):
-				web.Error(w, http.StatusUnauthorized, "Email, name or password wrong", err)
-
-			case errors.Is(err, domain.ErrInternal):
-				web.Error(w, http.StatusInternalServerError, "Internal server error", err)
-
-			default:
-				log.Printf("Unexpected error: %v", err)
-				web.Error(w, http.StatusInternalServerError, "Unexpected error", err)
-			}
+		var req LoginRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			web.Error(w, http.StatusBadRequest, "Invalid credentials", err)
 			return
 		}
 
-		tokenJwtString, err := service.TokenJWT(futureID)
+		key := "login-attempt:" + req.NameOrEmail
+		allowed, err := login.Limiter.CheckLimit(r.Context(), key, 5, 10*time.Minute)
+		if err != nil {
+			web.Error(w, http.StatusInternalServerError, "Internal server error", err)
+			return
+		}
+
+		if !allowed {
+			web.Error(w, http.StatusTooManyRequests, "Too many requests, try again later", err)
+			return
+		}
+
+		input := service.LoginData{
+			Name: req.NameOrEmail,
+			Email: req.NameOrEmail,
+			Password: req.Password,
+		}
+	
+		err, id := login.Service.VerifyLoginFunction(r.Context(), input)
+		if err != nil {
+			MapServiceError(w, err)
+			return
+		}
+
+		login.Limiter.ResetLimit(r.Context(), "login-attempt:"+req.NameOrEmail)
+
+		tokenJwtString, err := service.TokenJWT(id)
 		if err != nil {
 			web.Error(w, http.StatusInternalServerError, "ERROR TRYING TO CREATE A TOKEN", err)
 			return
@@ -189,6 +204,7 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 	} else {
 		log.Println("ERROR")
 		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		return
 	}
 }
 
