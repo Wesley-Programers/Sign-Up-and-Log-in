@@ -3,67 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theme</title>
-    <style>
-        body {
-            background: black;
-            color: white;
-        }
-
-        body.light {
-            background: rgb(255, 255, 255);
-            color: black;
-        }
-
-        body.dark {
-            background: rgb(0, 0, 0);
-            color: rgb(255, 255, 255);
-        }
-    </style>
+    <title>Appearance Settings</title>
+    <link rel="stylesheet" href="../css/theme.css">
 </head>
 <body>
-    <div id="theme">
 
-        <form action="" id="formThemes">
-            <label for=""><input type="radio" name="theme" id="darkTheme" value="dark"></label>
-            <span id="dark">Dark</span>
-            <label for=""><input type="radio" name="theme" id="lightTheme" value="light"></label>
-            <span id="light">Light</span>
+    <main id="theme-container">
+        <header>
+            <h1>Appearance</h1>
+            <p>Select how you want the interface to look.</p>
+        </header>
 
+        <form id="formThemes">
+            <label class="theme-card" for="darkTheme">
+                <input type="radio" name="theme" id="darkTheme" value="dark" checked>
+                <div class="card-content">
+                    <div class="theme-preview dark-preview">
+                        <div class="preview-line"></div>
+                        <div class="preview-line short"></div>
+                    </div>
+                    <span class="theme-name">Dark Mode</span>
+                </div>
+            </label>
+
+            <label class="theme-card" for="lightTheme">
+                <input type="radio" name="theme" id="lightTheme" value="light">
+                <div class="card-content">
+                    <div class="theme-preview light-preview">
+                        <div class="preview-line"></div>
+                        <div class="preview-line short"></div>
+                    </div>
+                    <span class="theme-name">Light Mode</span>
+                </div>
+            </label>
         </form>
-    </div>
 
-    <script>
-        document.querySelectorAll('input[name="theme"]').forEach((input) => {
+        <footer id="theme-footer">
+            <button type="button" id="btn-back" onclick="window.history.back()">Save & Return</button>
+        </footer>
+    </main>
 
-            input.addEventListener("change", (event) => {
-                const theme = event.target.value;
-                console.log("Escolhido: ", theme);
-
-                body.classList.remove("light", "dark");
-                body.classList.add(theme);
-
-                localStorage.setItem("currentTheme", theme);
-                setTimeout(() => {
-                    window.location.href = window.location.href = '../HTML/mainAccount.html';
-                }, 300);
-            });
-        });
-
-        const getTheme = localStorage.getItem("currentTheme");
-        const body = document.body;
-
-        window.addEventListener("DOMContentLoaded", () => {
-            if (getTheme) {
-                body.classList.add(getTheme);
-                const currentTheme = document.querySelector(`input[name="theme"][value="${getTheme}"]`);
-                if (currentTheme) {
-                    currentTheme.checked = true;
-                } else {
-                    body.classList.add("light");
-                };
-            };
-        });
-    </script>
+    <script src="../js/theme.js"></script>
 </body>
 </html>

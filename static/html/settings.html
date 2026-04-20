@@ -4,63 +4,88 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings</title>
-    <style>
-        body {
-            background: rgb(0, 0, 0);
-            color: rgb(255, 255, 255);
-        }
-
-        #account {
-            position: absolute;
-            top: 19%;
-            cursor: pointer;
-        }
-
-        #theme {
-            position: absolute;
-            top: 23%;
-            cursor: pointer;
-        }
-
-        #security {
-            position: absolute;
-            top: 31%;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/settings.css">
 </head>
 <body>
 
-    <div id="div-settings">
-        <span id="account">Account</span>
-        <span id="theme">Theme</span>
-        <span id="security">Security</span>
-    </div>
+    <main id="div-settings">
+        <header id="settings-header">
+            <h1>Settings</h1>
+            <p>Manage your account preferences and system configuration.</p>
+        </header>
+
+        <nav id="settings-options">
+            <div class="setting-item" id="account">
+                <div class="setting-info">
+                    <span class="icon">👤</span>
+                    <div>
+                        <span class="title">Account</span>
+                        <p class="description">Profile details, display name and email.</p>
+                    </div>
+                </div>
+                <span class="arrow">→</span>
+            </div>
+
+            <div class="setting-item" id="theme">
+                <div class="setting-info">
+                    <span class="icon">🌓</span>
+                    <div>
+                        <span class="title">Theme</span>
+                        <p class="description">Customize the appearance of your dashboard.</p>
+                    </div>
+                </div>
+                <span class="arrow">→</span>
+            </div>
+
+            <div class="setting-item" id="security">
+                <div class="setting-info">
+                    <span class="icon">🛡️</span>
+                    <div>
+                        <span class="title">Security</span>
+                        <p class="description">Passwords, 2FA and session management.</p>
+                    </div>
+                </div>
+                <span class="arrow">→</span>
+            </div>
+
+            <div class="setting-item" id="privacy">
+                <div class="setting-info">
+                    <span class="icon">👁️</span>
+                    <div>
+                        <span class="title">Privacy</span>
+                        <p class="description">Control who can see your activity.</p>
+                    </div>
+                </div>
+                <span class="arrow">→</span>
+            </div>
+        </nav>
+
+        <footer id="settings-footer">
+            <button id="button-back">Back to Dashboard</button>
+        </footer>
+    </main>
 
     <script>
         let theme = document.getElementById("theme");
         let security = document.getElementById("security");
         let account = document.getElementById("account");
+        let back = document.getElementById("button-back");
+
+        back.addEventListener("click", () => {
+            window.location.href = '../html/mainAccount.html';
+        });
 
         theme.addEventListener("click", () => {
             setTimeout(() => {
-                window.location.href = '../HTML/theme.html'
+                window.location.href = '../html/theme.html'
             }, 500);
         });
 
         security.addEventListener("click", () => {
             setTimeout(() => {
-                window.location.href = '../HTML/security.html'
-            }, 500);
+                window.location.href = '../html/security.html'
+            }, 100);
         });
-
-        account.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = '../HTML/account.html'
-            }, 500);
-        });
-
     </script>
-    
 </body>
 </html>

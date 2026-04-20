@@ -4,46 +4,44 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign up</title>
-    <style>
-        body {
-            background: black;
-            color: white;
-        }
-
-        #withoutAccount {
-            cursor: pointer;
-        }
-        
-        #nameAlreadyExits, #emailAlreadyExits, #emailIncorrect, #shortPassword {
-            display: none;
-        }
-    </style>
+    <link rel="stylesheet" href="../css/index.css">
 </head>
 <body>
 
     <div id="main-div">
-
-
         <div id="dataDiv">
-            <p id="welcome">WELCOME</p>
-            <p id="sign-up-title">SIGN UP</p>
-            <p id="nameAlreadyExits">This name already exists</p>
-            <p id="emailAlreadyExits">This email already exists</p>
-            <p id="emailIncorrect">Enter a valid email adress</p>
-            <p id="shortPassword"></p>
-            <p id="withoutAccount" onclick="alreadyHaveAccount()">Already have an account?</p>
+            <header>
+                <p id="welcome">WELCOME</p>
+                <h1 id="sign-up-title">SIGN UP</h1>
+            </header>
 
+            <div id="error-container">
+                <p id="nameAlreadyExits" class="error-msg">This name already exists</p>
+                <p id="emailAlreadyExits" class="error-msg">This email already exists</p>
+                <p id="emailIncorrect" class="error-msg">Enter a valid email address</p>
+                <p id="shortPassword" class="error-msg"></p>
+            </div>
 
-            <form id="form-sign-up" action="http://127.0.0.1:8000/sign" method="post">
-        
-                <input type="text" id="inputName" required name="name" placeholder="Name">
-                <input type="text" id="inputEmail" required name="email" placeholder="Email">
-                <input type="password" id="inputPassword" required name="password" placeholder="Password">
+            <form id="form-sign-up" method="post">
+                <div class="input-group">
+                    <input type="text" id="inputName" required name="name" placeholder="Full Name">
+                </div>
+                
+                <div class="input-group">
+                    <input type="email" id="inputEmail" required name="email" placeholder="Email Address">
+                </div>
 
-                <button id="send" type="submit">Sign up</button>
+                <div class="input-group">
+                    <input type="password" id="inputPassword" required name="password" placeholder="Create Password">
+                </div>
+
+                <button id="send" type="submit">Create Account</button>
             </form>
-        </div>
 
+            <footer>
+                <p id="withoutAccount">Already have an account?</p>
+            </footer>
+        </div>
     </div>
 
     <script src="../js/index.js"></script>

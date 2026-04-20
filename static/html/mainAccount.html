@@ -3,39 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account</title>
-    <style>
-        body {
-            background: black;
-            color: white;
-        }
-
-        #setting, #logOut {
-            cursor: pointer;
-        }
-    </style>
+    <title>Account Dashboard</title>
+    <link rel="stylesheet" href="../css/main.css">
 </head>
 <body>
 
-    
-    <div id="main">
+    <main id="main">
+        <header id="dashboard-header">
+            <div class="user-greeting">
+                <p id="welcome">HELLO, HOW'S IT GOING?</p>
+                <h1 id="user-name">User Account</h1> </div>
+            <button id="setting" onclick="window.location.href='../html/settings.html'">
+                <span class="gear-icon" id="settings">⚙️</span> Settings
+            </button>
+        </header>
 
-        <p id="welcome">HELLO, HOW'S IT GOING?</p>
-        <span id="setting">Settings</span>
+        <section id="stats-grid">
+            <div class="stat-card">
+                <span class="stat-label">Security Score</span>
+                <span class="stat-value"></span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Active Sessions</span>
+                <span class="stat-value"></span>
+            </div>
+        </section>
 
-    </div>
-    
-    
+        <section id="recent-activity">
+            <h3>Recent Activity</h3>
+            <div class="activity-list">
+                <div class="activity-item">
+                    <span class="dot"></span>
+                    <p>Last login: <span class="time"></span></p>
+                </div>
+                <div class="activity-item">
+                    <span class="dot"></span>
+                    <p>Password changed <span class="time"></span></p>
+                </div>
+            </div>
+        </section>
+
+        <footer id="dashboard-footer">
+            <span id="logout-btn">Log out</span>
+        </footer>
+    </main>
+
     <script>
-        let settings = document.getElementById("setting");
         
-
-        settings.addEventListener("click", () => {
-            setTimeout(() => {
-                window.location.href = './settings.html'
-            }, 500);
-        });
-
     </script>
 </body>
 </html>

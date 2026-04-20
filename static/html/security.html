@@ -3,148 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Security</title>
-    <style>
-        body {
-            background: black;
-            color: white;
-        }
-
-        #change-email, #another-email, #change-name {
-            cursor: pointer;
-        }
-
-        #change-email {
-            position: absolute;
-            top: 50%;
-        }
-
-        .displayNone {
-            display: none;
-        }
-
-        #div-change-email-window, #div-change-name-window, #deleteSession {
-            border: 2px solid white;
-            display: none;
-        }
-
-        /* #deleteSession {
-            border: 2px solid white;
-        } */
-
-        #saveNewName, #saveNewEmail, #leaveChangeEmail, #leaveChangeName, #clear, #leaveDeleteAccount, #deleteAccount {
-            cursor: pointer;
-        }
-
-        #currentEmailWrongMessage, #currentNameWrongMessage, #diferentEmailsMessage, #someErrorMessage,
-        #someError, #incorrectPasswordMessage, #incorrectEmail, #incorrectPassword, #differentEmailsMessage, #newEmailIsTheSame, #someError,
-        #newNameIsTheSame {
-            display: none;
-        }
-
-    </style>
+    <title>Account Security</title>
+    <link rel="stylesheet" href="../css/security.css">
 </head>
 <body>
 
     <div id="div-security">
+        <h2 id="security-main-title">Account Security</h2>
 
-        
-        <div id="security-account">
-
-            <span id="change-name">CHANGE NAME</span>
-            <span id="change-email">CHANGE EMAIL</span>
-
-            <span id="another-email">ANOTHER EMAIL</span>
-
-            
-            <div id="div-change-name-window">
-                <span id="title">CHANGE NAME</span>
-
-                <form action="http://127.0.0.1:8000/change" method="post" id="formChangeName">
-                    <input type="text" id="currentName" name="currentName" placeholder="Your current name" required>
-                    <input type="text" id="newName" name="newName" placeholder="Your new name" required>
-
-                    <button type="submit" id="saveNewName">SAVE</button>
-                </form>
-
-                <span id="currentNameWrongMessage">Invalid current name</span>
-                <span id="newNameIsTheSame">New name can't be the same</span>
-                <span id="someErrorMessage">Some unexpected error occurred</span>
-
-                <span id="leaveChangeName">LEAVE</span>
-                <!-- <span id="saveNewName">SAVE</span> -->
+        <div class="security-section">
+            <h3 class="section-label">Identity</h3>
+            <div class="action-buttons">
+                <span id="change-name" class="btn-action">Change Display Name</span>
+                <span id="change-email" class="btn-action">Update Email Address</span>
             </div>
 
-            
-            <div id="div-change-email-window">
-                <span id="title">CHANGE EMAIL</span>
+            <div id="div-change-name-window" class="modal-subview hidden">
+                <span class="modal-title">NEW DISPLAY NAME</span>
+                <form method="post" id="formChangeName">
+                    <input type="text" id="currentName" name="currentName" placeholder="Current name" required>
+                    <input type="text" id="newName" name="newName" placeholder="New display name" required>
+                    <button type="submit" id="saveNewName">CONFIRM CHANGE</button>
+                </form>
+                <div class="error-container">
+                    <span id="currentNameWrongMessage" class="error-text hidden">Invalid current name</span>
+                    <span id="newNameIsTheSame" class="error-text hidden">New name is the same</span>
+                </div>
+                <span id="leaveChangeName" class="btn-leave">CANCEL</span>
+            </div>
 
+            <div id="div-change-email-window" class="modal-subview hidden">
+                <span class="modal-title">UPDATE EMAIL</span>
                 <form method="post" id="formChangeEmail">
-
-                    <input type="text" id="current_email" name="currentEmail" placeholder="Your email" required>
-                    <input type="text" id="new_email" name="newEmail" placeholder="New email" required>
-                    <input type="text" id="confirm_new_email" name="confirmNewEmail" placeholder="Confirm the email" required>
-                    <input type="password" name="password" id="password" placeholder="Your password" required>
-
-                    <button type="submit" id="saveNewEmail">SAVE</button>
-
+                    <input type="email" id="current_email" name="currentEmail" placeholder="Current email" required>
+                    <input type="email" id="new_email" name="newEmail" placeholder="New email address" required>
+                    <input type="email" id="confirm_new_email" name="confirmNewEmail" placeholder="Confirm new email" required>
+                    <input type="password" id="password" name="password" placeholder="Account password" required>
+                    <button type="submit" id="saveNewEmail">UPDATE EMAIL</button>
                 </form>
-
-                <span id="currentEmailWrongMessage">Current email invalid</span>
-                <span id="differentEmailsMessage">Different emails were typed</span>
-                <span id="newEmailIsTheSame">The new email can't be the same</span>
-                <span id="incorrectPasswordMessage">Invalid password</span>
-                <span id="someError">Some unexpected error occurred</span>
-
-                <span id="leaveChangeEmail">LEAVE</span>
+                <div class="error-container">
+                    <span id="currentEmailWrongMessage" class="error-text hidden">Current email invalid</span>
+                    <span id="differentEmailsMessage" class="error-text hidden">Emails do not match</span>
+                    <span id="incorrectPasswordMessage" class="error-text hidden">Wrong password</span>
+                </div>
+                <span id="leaveChangeEmail" class="btn-leave">CANCEL</span>
             </div>
         </div>
 
-
-        <div id="security-access-and-login">
-
-            <span id="last-logins"></span>
-            <span id="authentication"></span>
-            <span id="change-password"></span>
-            <span id="last-change-password"></span>
-
-        </div>
-
-
-        <div id="security-logs">
-
-            <span id="clear">CLEAR</span>
-
-        </div>
-
-        <div id="log-out">
-
-            <span id="deactivate-account"></span>
-            <span id="alert-before-delete"></span>
-
-
-            <span id="deleteAccount">DELETE ACCOUNT</span>
-            <div id="deleteSession">
-
-                <form action="http://127.0.0.1:8000/delete" method="post" id="deleteAccountForm">
-                    <input type="text" name="emailConfirm" id="emailConfirm" placeholder="Your email" required>
-                    <input type="password" name="passwordConfirm" id="passwordConfirm" placeholder="Confirm the password" required>
-    
-                    <button type="submit" id="buttonDeleteAccount">DELETE</button>
-                </form>
-
-                <span id="incorrectPassword">Incorrect password</span>
-                <span id="incorrectEmail">Incorrect email</span>
-                <span id="someErrorDeleteAccount">Some unexpected error occurred</span>
-                <span id="leaveDeleteAccount">LEAVE</span>
+        <div class="security-section">
+            <h3 class="section-label">Access & Authentication</h3>
+            <div class="info-row">
+                <span>Last login:</span>
+                <span id="last-logins" class="info-value"></span>
             </div>
-
+            <div class="info-row">
+                <span>2FA Status:</span>
+                <span id="authentication" class="info-value">Disabled</span>
+            </div>
+            <span id="change-password" class="btn-action">Change Password</span>
+            <span id="last-change-password" class="info-date"></span>
         </div>
-        
+
+        <div class="security-section">
+            <h3 class="section-label">Account Logs</h3>
+            <span id="clear" class="btn-action">Clear Security Activity</span>
+        </div>
+
+        <div class="security-section danger-zone">
+            <h3 class="section-label">Danger Zone</h3>
+            <p class="danger-text">Once you delete your account, there is no going back.</p>
+            <span id="deleteAccount" class="btn-delete">DELETE ACCOUNT</span>
+            
+            <div id="deleteSession" class="modal-subview hidden">
+                <form method="post" id="deleteAccountForm">
+                    <input type="email" name="emailConfirm" id="emailConfirm" placeholder="Type your email to confirm" required>
+                    <input type="password" name="passwordConfirm" id="passwordConfirm" placeholder="Password" required>
+                    <button type="submit" id="buttonDeleteAccount">PERMANENTLY DELETE</button>
+                </form>
+                <span id="leaveDeleteAccount" class="btn-leave">ABORT</span>
+            </div>
+        </div>
 
     </div>
 
     <script src="../js/security.js"></script>
-   
 </body>
 </html>
