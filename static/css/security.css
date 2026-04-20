@@ -1,0 +1,166 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+    --bg-black: #000000;
+    --card-gray: #0a0a0a;
+    --border-color: #1a1a1a;
+    --text-main: #ffffff;
+    --text-muted: #888888;
+    --accent-blue: #ffffff; /* Mantendo o Pure Dark que você curte */
+    --danger: #ff3333;
+}
+
+body {
+    background-color: var(--bg-black);
+    color: var(--text-main);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    margin: 0;
+}
+
+#div-security {
+    background-color: var(--card-gray);
+    width: 100%;
+    max-width: 550px;
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 2.5rem;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    animation: fadeIn 0.5s ease-out;
+}
+
+#security-main-title {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: -1px;
+}
+
+.security-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.section-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.info-value { color: var(--text-muted); }
+
+/* Botões de Ação */
+.btn-action {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    cursor: pointer;
+    padding: 8px 0;
+    transition: opacity 0.2s;
+    font-weight: 500;
+}
+
+.btn-action:hover { opacity: 0.6; }
+
+/* Janelas de Edição (Modais Embutidos) */
+.modal-subview {
+    background: #111;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 15px;
+    border: 1px solid #222;
+}
+
+.modal-title {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: var(--text-muted);
+}
+
+/* Inputs */
+input {
+    width: 100%;
+    background: #000;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 12px;
+    color: white;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    transition: border-color 0.3s;
+}
+
+input:focus {
+    outline: none;
+    border-color: #666;
+}
+
+/* Botões de Confirmação */
+button {
+    width: 100%;
+    background: white;
+    color: black;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+button:active { transform: scale(0.98); }
+
+/* Danger Zone */
+.danger-zone { border-bottom: none; }
+.danger-text { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px; }
+.btn-delete { color: var(--danger); cursor: pointer; font-weight: 600; font-size: 0.9rem; }
+#buttonDeleteAccount { background: var(--danger); color: white; }
+
+/* Erros */
+.error-text {
+    display: block;
+    color: var(--danger);
+    font-size: 0.75rem;
+    margin-bottom: 10px;
+    animation: shake 0.4s ease;
+}
+
+.btn-leave {
+    display: block;
+    text-align: center;
+    font-size: 0.75rem;
+    margin-top: 15px;
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.btn-leave:hover { color: white; }
+
+/* Utilitários */
+.hidden { display: none; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}

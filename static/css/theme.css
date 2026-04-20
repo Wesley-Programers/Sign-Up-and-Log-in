@@ -1,0 +1,146 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;700&display=swap');
+
+:root {
+    --bg-color: #050505;
+    --card-bg: #0f0f0f;
+    --accent-white: #ffffff;
+    --border-dim: #222;
+    --text-muted: #666;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    transition: background-color 0.3s, color 0.3s;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+body.light {
+    --bg-color: #f0f0f0;
+    --card-bg: #ffffff;
+    --text-main: #000000;
+    --border-dim: #ddd;
+}
+
+#theme-container {
+    background-color: var(--card-bg);
+    width: 100%;
+    max-width: 400px;
+    padding: 2.5rem;
+    border-radius: 24px;
+    border: 1px solid var(--border-dim);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    animation: fadeIn 0.5s ease;
+}
+
+header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 8px 0 25px 0;
+}
+
+/* Esconder o rádio padrão */
+input[type="radio"] {
+    display: none;
+}
+
+#formThemes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.theme-card {
+    cursor: pointer;
+}
+
+.card-content {
+    background: #151515;
+    border: 2px solid var(--border-dim);
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.theme-name {
+    display: block;
+    margin-top: 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+/* Prévia visual dentro do card */
+.theme-preview {
+    height: 60px;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    border: 1px solid #333;
+}
+
+.dark-preview { background: #000; }
+.light-preview { background: #fff; border-color: #ddd; }
+
+.preview-line {
+    height: 4px;
+    width: 100%;
+    background: #333;
+    border-radius: 2px;
+}
+.light-preview .preview-line { background: #ddd; }
+.preview-line.short { width: 60%; }
+
+/* Efeito de Seleção (Quando o rádio está marcado) */
+input[type="radio"]:checked + .card-content {
+    border-color: var(--accent-white);
+    background: #1a1a1a;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+}
+
+input[type="radio"]:checked + .card-content .theme-name {
+    color: white;
+}
+
+/* Footer */
+#theme-footer {
+    margin-top: 30px;
+    text-align: center;
+}
+
+#btn-back {
+    background: white;
+    color: black;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    width: 100%;
+    transition: 0.3s;
+}
+
+#btn-back:hover {
+    opacity: 0.9;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
