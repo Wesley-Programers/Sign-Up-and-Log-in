@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let dontHaveAccount = document.getElementById("dontHaveAccount");
 
     dontHaveAccount.addEventListener("click", () => {
-        window.location.href = '../HTML/index.html'
+        window.location.href = '../html/index.html'
     });
 
     forgotPassword.addEventListener("click", () => {
@@ -50,14 +50,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(data),
             })
 
-            if (!fetchLogin.ok) {
-                const errorText = await fetchLogin.text();
-                console.log("error: ", errorText);
-                return;
-            }
+            // if (!fetchLogin.ok) {
+            //     const errorText = await fetchLogin.text();
+            //     console.log("error: ", errorText);
+            //     return;
+            // }
 
             const status = fetchLogin.status
-            const message = await fetchLogin.json();
+            const message = await fetchLogin.text();
             alert(`Status: ${status} Message: ${message}`);
 
             if (status === 200) {

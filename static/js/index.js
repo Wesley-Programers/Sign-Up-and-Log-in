@@ -1,13 +1,13 @@
-function alreadyHaveAccount() {
-    setTimeout(() => {
-        window.location.href = '../HTML/logIn.html'
-    }, 250);
-};
-
-
 document.addEventListener("DOMContentLoaded", () => {
 
     let form = document.getElementById("form-sign-up");
+    let alreadyHaveAnAccount = document.getElementById("withoutAccount");
+
+    alreadyHaveAnAccount.addEventListener("click", () => {
+        setTimeout(() => {
+            window.location.href = '../html/login.html'
+        }, 150);
+    });
 
     form.addEventListener("submit", async (form) => {
         let button = document.getElementById("send");
