@@ -15,7 +15,9 @@ document.addEventListener("DOMContentLoaded", () => {
         form.preventDefault();
         button.disabled = true;
 
-        const formData = new FormData(form.target)
+        const formData = new FormData(form.target);
+        const data = Object.fromEntries(formData.entries());
+
         let thisNameAlreadyExists = document.getElementById('nameAlreadyExits');
         let thisEmailAlreadyExists = document.getElementById('emailAlreadyExits');
         
@@ -23,32 +25,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const fetchAqui = await fetch("http://127.0.0.1:8000/register", {
                 method: "POST",
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json"
+                },
                 credentials: "include",
+                body: JSON.stringify(data),
             })
 
             const status = fetchAqui.status
             const message = await fetchAqui.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 201 && message === "VALID") {
+            if (status === 201 && message === "success") {
                 setTimeout(() => {
                     window.location.href = '../html/mainAccount.html'
-                }, 500);
+                }, 150);
                 
             } else {
-
-                if (status === 400 && message === "NAME ALREADY EXISTS") {
-                    thisNameAlreadyExists.style.display = 'block';  
-
-                } else if (status === 400 && message === "EMAIL ALREADY EXISTS") {
-                    thisEmailAlreadyExists.style.display = 'block';
-
-                } else if (status === 400 && message === "SOME ERROR") {
-
-                } else {
-                    
-                }
 
             }
 

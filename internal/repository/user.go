@@ -1,20 +1,21 @@
 package repository
 
 import (
-	"ShieldAuth-API/internal/database"
-	"ShieldAuth-API/internal/domain"
 	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
+	
+	"ShieldAuth-API/internal/database"
+	"ShieldAuth-API/internal/domain"
 
 	"github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 )
+
 
 type RegisterStruct struct {
 	Database *sql.DB
@@ -90,13 +91,15 @@ var (
 )
 
 func (register *RegisterStruct) Register(ctx context.Context, name, email, password string) error {
-	cleanName := strings.TrimSpace(name)
-	cleanEmail := strings.TrimSpace(email)
+	u := &domain.User{
+		Name: name,
+		Email: email,
+		PasswordHash: password,
+	}
 
-	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", cleanName, cleanEmail, password)
+	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", u.Name, u.Email, u.PasswordHash)
 	if err != nil {
-		var mySQLError *mysql.MySQLError
-		if errors.As(err, &mySQLError) {
+		if mySQLError, ok := errors.AsType[*mysql.MySQLError](err); ok {
 			if mySQLError.Number == 1062 {
 				return domain.ErrEmailAlreadyExists
 			}
@@ -107,19 +110,19 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 }
 
 
-func (loginStruct *VerifyLoginStruct) GetByCredentials(ctx context.Context, login string) (*domain.User, error) {
-	var u domain.User
+func (loginStruct *VerifyLoginStruct) GetByCredentials(ctx context.Context, u domain.User) (*domain.User, error) {
+	user := &domain.User{}
 
 	query := "SELECT id, name, email, password FROM users WHERE name = ? OR email = ? LIMIT 1"
-	err := loginStruct.Database.QueryRowContext(ctx, query, login, login).Scan(&u.Id, &u.Name, &u.Email, &u.PasswordHash)
-	if err != nil {
+	err := loginStruct.Database.QueryRowContext(ctx, query, u.Name, u.Email).Scan(&user.Id, &user.Name, &user.Email, &user.PasswordHash)
+	if err != nil {	
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
 		}
 		return nil, err
 	}
 
-	return &u, nil
+	return user, nil
 }
 
 
@@ -165,7 +168,7 @@ func (changeEmail *ChangeEmailStruct) GetID(ctx context.Context, id int) (*domai
 		return nil, err
 	}
 	
-	return domain.Restore(test.ID, test.Email, test.PasswordHash), nil
+	return domain.RestoreEmail(test.ID, test.Email, test.PasswordHash), nil
 }
 
 

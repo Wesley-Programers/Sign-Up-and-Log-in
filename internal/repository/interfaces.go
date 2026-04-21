@@ -6,11 +6,11 @@ import (
 )
 
 type User interface {
-	Register(ctx context.Context, name, email, password string) error
+	Register(ctx context.Context, a,b,c string) error
 }
 
 type LoginUser interface {
-	GetByCredentials(ctx context.Context, login string) (*domain.User, error)
+	GetByCredentials(ctx context.Context, u domain.User) (*domain.User, error)
 }
 
 type ChangeName interface {

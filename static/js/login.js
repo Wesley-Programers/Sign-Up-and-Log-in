@@ -50,11 +50,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(data),
             })
 
-            // if (!fetchLogin.ok) {
-            //     const errorText = await fetchLogin.text();
-            //     console.log("error: ", errorText);
-            //     return;
-            // }
+            if (!fetchLogin.ok) {
+                const errorText = await fetchLogin.text();
+                console.log("error: ", errorText);
+                return;
+            }
 
             const status = fetchLogin.status
             const message = await fetchLogin.text();
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 setTimeout(() => {
                     window.location.href = '../html/mainAccount.html'
-                }, 300);
+                }, 150);
 
             } else if (status != 200) {
 

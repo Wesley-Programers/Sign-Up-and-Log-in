@@ -1,20 +1,20 @@
 package service
 
 import (
-	"ShieldAuth-API/internal/domain"
-	"ShieldAuth-API/internal/repository"
 	"context"
 	"database/sql"
 	"encoding/hex"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"os"
+	"crypto/sha256"
 	"sync"
 	"time"
 	"unicode"
-
-	"crypto/rand"
-	"crypto/sha256"
+	
+	"ShieldAuth-API/internal/domain"
+	"ShieldAuth-API/internal/repository"
 
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
@@ -24,34 +24,28 @@ import (
 type Register struct {
 	Repository repository.User
 }
-
 type VerifyLogin struct {
 	Repository repository.LoginUser
 }
-
 type ChangeName struct {
 	Repository repository.ChangeName
 }
-
 type ChangeEmail struct {
 	Repository repository.ChangeEmail
 }
-
 type Request struct {
 	Repository repository.Request
 }
-
 type ResetPassword struct {
 	Repository repository.ResetPassword
 }
-
 type DeleteAccount struct {
 	Repository repository.DeleteAccount
 }
-
 type ValidToken struct {
 	Repository repository.ValidToken
 }
+
 
 func NewUserStruct(repository repository.User) *Register {
 	return &Register{
@@ -94,6 +88,7 @@ func NewValidToken(repository repository.ValidToken) *ValidToken {
 	}
 }
 
+
 type ChangeEmailData struct {
 	ID int
 	CurrentEmail string
@@ -112,24 +107,30 @@ type LoginData struct {
 	Email string
 	Password string
 }
+type RegisterData struct {
+	Name string
+	Email string
+	Password string
+}
+
 
 var (
 	test string
 	lock sync.Mutex
 )
 
-func (register *Register) RegisterFunction(ctx context.Context, name, email, password string) error {
-	validPassword, message := VerifyPassword(password)
+func (register *Register) RegisterFunction(ctx context.Context, input RegisterData) error {
+	validPassword, message := VerifyPassword(input.Password)
 	if !validPassword {
 		return errors.New(message)
 	}
 
-	hash, err := HashPassword(password)
+	hash, err := HashPassword(input.Password)
 	if err != nil && validPassword {
 		return err
 	}
 
-	err = register.Repository.Register(ctx, name, email, string(hash))
+	err = register.Repository.Register(ctx, input.Name, input.Email, string(hash))
 	if err != nil {
 		return err
 	}
@@ -149,7 +150,7 @@ func (login *VerifyLogin) VerifyLoginFunction(ctx context.Context, input LoginDa
 		return domain.ErrInvalidData, 0
 	}
 
-	user, err := login.Repository.GetByCredentials(ctx, identifier)
+	user, err := login.Repository.GetByCredentials(ctx, domain.User{Name: input.Name, Email: input.Email, PasswordHash: input.Password})
 	if err != nil {
 		return domain.ErrInvalidCredentials, 0
 	}

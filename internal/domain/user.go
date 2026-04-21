@@ -58,8 +58,7 @@ func (user *User) ChangeName(currentName, newName, confirmNewEmail string) error
 
 func (user *User) Login(nameOrEmail, password string) error {
 
-	isEmail := strings.HasSuffix(nameOrEmail, "@example.com")
-	if isEmail {
+	if strings.HasSuffix(nameOrEmail, "@example.com") {
 		if !strings.EqualFold(nameOrEmail, user.Email) {
 			return ErrUserNotFound
 		}
@@ -74,12 +73,32 @@ func (user *User) Login(nameOrEmail, password string) error {
 }
 
 
+func (user *User) Register(name, email, password string) (*User, error) {
+	if name == "" || email == "" {
+		return nil, ErrInvalidCredentials
+	}
+
+	cleanName := strings.TrimSpace(name)
+	cleanEmail := strings.TrimSpace(email)
+
+	if !strings.HasSuffix(cleanEmail, "@example.com") {
+		return nil, ErrInvalidEmailFormat
+	}
+
+	return &User{
+		Name: strings.ToLower(cleanName),
+		Email : strings.ToLower(cleanEmail),
+		PasswordHash: password,
+	}, nil
+}
+
+
 func (user *User) PasswordValid(password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 }
 
 
-func Restore(id int, email, passwordHash string) *User {
+func RestoreEmail(id int, email, passwordHash string) *User {
 	return &User{
 		Id: id,
 		Email: email,
@@ -87,14 +106,12 @@ func Restore(id int, email, passwordHash string) *User {
 	}
 }
 
-
 func RestoreName(id int, name string) *User {
 	return &User{
 		Id: id,
 		Name: name,
 	}
 }
-
 
 func RestoreLogin(id int, name, email, passwordHash string) *User {
 	return &User{

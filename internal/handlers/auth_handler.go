@@ -2,13 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"net/http"
 	"text/template"
 	"time"
-
-	"ShieldAuth-API/internal/domain"
+	
 	"ShieldAuth-API/internal/response"
 	"ShieldAuth-API/internal/security"
 	"ShieldAuth-API/internal/service"
@@ -36,9 +34,10 @@ func NewRegisterHanlder(service *service.Register) *RegisterHandler {
 		Service: service,
 	}
 }
-func NewLoginHandler(service *service.VerifyLogin) *LoginHandler {
+func NewLoginHandler(service *service.VerifyLogin, limiter *security.RedisLimiter) *LoginHandler {
 	return &LoginHandler{
 		Service: service,
+		Limiter: limiter,
 	}
 }
 func NewRequestHandler(service *service.Request) *RequestHandler {
@@ -53,6 +52,11 @@ func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
 }
 
 
+type RegisterRequest struct {
+	Name string `json:"name" validate:"required"`
+	Email string `json:"email" validate:"required"`
+	Password string `json:"password" validate:"required"`
+}
 type LoginRequest struct {
 	NameOrEmail string `json:"nameOrEmail" validate:"required"`
 	Password string `json:"password" validate:"required"`
@@ -70,28 +74,25 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 
 	if r.Method == http.MethodPost {
 
-		ctx := r.Context()
-
-		name := r.FormValue("name")
-		email := r.FormValue("email")
-		password := r.FormValue("password")
-	
-		err := handler.Service.RegisterFunction(ctx, name, email, password)
-		if err != nil {
-			switch {
-			case errors.Is(err, domain.ErrEmailAlreadyExists):
-				response.Error(w, http.StatusConflict, "Email already exists", err)
-
-			case errors.Is(err, domain.ErrInvalidData):
-				response.Error(w, http.StatusBadRequest, "Invalid input", err)
-
-			default:
-				log.Printf("Unexpected error: %v", err)
-				response.Error(w, http.StatusInternalServerError, "Internal server error", err)
-			}
+		var req RegisterRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
 			return
 		}
-		response.Json(w, http.StatusOK, map[string]string{"message": "success"})
+
+		input := service.RegisterData{
+			Name: req.Name,
+			Email: req.Email,
+			Password: req.Password,
+		}
+	
+		log.Println("email:", input.Email)
+		err := handler.Service.RegisterFunction(r.Context(), input)
+		if err != nil {
+			MapServiceError(w, err)
+			return
+		}
+		response.Json(w, http.StatusCreated, map[string]string{"message": "success"})
 	
 	} else {
 		log.Println("ERROR")

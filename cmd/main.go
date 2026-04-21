@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	
-	// "os"
-	// "time"
-	
-	"ShieldAuth-API/internal/repository"
-	"ShieldAuth-API/internal/service"
-	"ShieldAuth-API/internal/middleware"
-	"ShieldAuth-API/internal/handlers"
+	"os"
+	"time"
+
 	"ShieldAuth-API/internal/database"
-	
+	"ShieldAuth-API/internal/handlers"
+	"ShieldAuth-API/internal/middleware"
+	"ShieldAuth-API/internal/repository"
+	"ShieldAuth-API/internal/security"
+	"ShieldAuth-API/internal/service"
+
 	"github.com/joho/godotenv"
 )
 
@@ -22,9 +22,9 @@ func main() {
 	if err := godotenv.Load(); err != nil {
 		log.Println("Warning: .env file was not found")
 	}
-	// jwtKey := os.Getenv("JWT_KEY")
+	jwtKey := os.Getenv("JWT_KEY")
 
-	// limiter := security.NewRedisLimiter("localhost:6379")
+	limiter := security.NewRedisLimiter("localhost:6379")
 
 	db := database.Connect()
 	defer db.Close()
@@ -39,7 +39,7 @@ func main() {
 
 	repositoryLogin := repository.NewVerifyLoginStruct(db)
 	serviceLogin := service.NewVerifyLogin(repositoryLogin)
-	handlerLogin := handlers.NewLoginHandler(serviceLogin)
+	handlerLogin := handlers.NewLoginHandler(serviceLogin, limiter)
 
 	repositoryChangeName := repository.NewChangeNameStruct(db)
 	serviceChangeName := service.NewChangeName(repositoryChangeName)
@@ -70,13 +70,14 @@ func main() {
 
 	mux.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
 
-	// handler := http.HandlerFunc(handlerChangeEmail.ChangeEmailHandler)
-	// handlerWithMiddleware := middleware.Chain(
-	// 	handler,
-	// 	middleware.AuthMiddleware(jwtKey),
-	// 	middleware.RateLimitMiddleware(limiter, 3, 24*time.Hour),
-	// )
-	mux.HandleFunc("/email", handlerChangeEmail.ChangeEmailHandler)
+	handler := http.HandlerFunc(handlerChangeEmail.ChangeEmailHandler)
+	handlerWithMiddleware := middleware.Chain(
+		handler,
+		middleware.AuthMiddleware(jwtKey),
+		middleware.RateLimitMiddleware(limiter, "change-email-attempt", 3, 24*time.Hour),
+	)
+	mux.HandleFunc("/email", handlerWithMiddleware.ServeHTTP)
+	// mux.HandleFunc("/email", handlerChangeEmail.ChangeEmailHandler)
 
 	mux.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
@@ -89,5 +90,5 @@ func main() {
 	middleware := middleware.CorsMiddleware(handlersWithRecovery)
 
 	fmt.Println("SERVER OPEN WITH GOLANG")
-	http.ListenAndServe("127.0.0.1:8000", middleware)
+	log.Fatal(http.ListenAndServe("127.0.0.1:8000", middleware))
 }
