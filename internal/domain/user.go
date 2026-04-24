@@ -41,7 +41,7 @@ func (user *User) ChangeEmail(currentEmail, newEmail, confirmNewEmail string) er
 }
 
 
-func (user *User) ChangeName(currentName, newName, confirmNewEmail string) error {
+func (user *User) ChangeName(currentName, newName string) error {
 
 	if !strings.EqualFold(currentName, user.Name) {
 		return ErrUserNotFound
