@@ -31,6 +31,11 @@ func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
 				}
 				return []byte(secretKey), nil
 			})
+
+			if len(tokenString) < 10 || tokenString == "null" {
+				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				return 
+			}
 	
 			if err != nil || !token.Valid {
 				http.Error(w, "Invalid token", http.StatusUnauthorized)
