@@ -89,6 +89,13 @@ document.addEventListener("DOMContentLoaded", () => {
         let button = document.getElementById("saveNewName");
 
         e.preventDefault();
+        const tokenKey = localStorage.getItem("jwt_key");
+
+        if (!tokenKey) {
+            alert("No token found. Please log in.");
+            return;
+        }
+
         button.disabled = true;
         const formData = new FormData(e.target);
 
@@ -96,14 +103,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const fetchChangeName = await fetch("http://127.0.0.1:8000/change", {
                 method: "POST",
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${tokenKey}`
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries())),
             })
 
             const status = fetchChangeName.status
             const message = await fetchChangeName.text()
             alert(`STATUS: ${status} MESSAGE: ${message}`);
 
-            if (status === 200 && message === "VALID") {
+            if (status === 200 && message === "success") {
 
                 alert("EVERYTHING IS WORK");
                 window.location.reload();
@@ -137,7 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
         a.preventDefault();
         button.disabled = true;
         const formDataEmail = new FormData(a.target);
-        const data = Object.fromEntries(formDataEmail.entries());
 
         try {
             const fetchChangeEmail = await fetch("http://127.0.0.1:8000/email", {
@@ -147,7 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     "Authorization": `Bearer ${tokenKey}`
                 },
                 credentials: "include",
-                body: JSON.stringify(data),
+                body: JSON.stringify(Object.fromEntries(formDataEmail.entries())),
             });
 
             const status = fetchChangeEmail.status
@@ -195,14 +205,17 @@ document.addEventListener("DOMContentLoaded", () => {
             
             const deleteAccountFetch = await fetch("http://127.0.0.1:8000/delete", {
                 method: "POST",
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(Object.fromEntries(formData.entries())),
             });
 
             const status = deleteAccountFetch.status
             const message = await deleteAccountFetch.text()
             alert(`Status: ${status} Message: ${message}`);
 
-            if (status === 200 && message === "VALID") {
+            if (status === 200 && message === "success") {
 
             } else if (status === 400 && message === "INCORRECT PASSWORD") {
                 incorrectPasswordDeleteAccount.style.display = 'block';
@@ -223,4 +236,5 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         
     });
+
 });
