@@ -144,9 +144,8 @@ func (changeName *ChangeNameStruct) GetID(ctx context.Context, id int) (*domain.
 	return domain.RestoreName(test.ID, test.Name), nil
 }
 
-
 func (changeName *ChangeNameStruct) UpdateName(ctx context.Context, user *domain.User) error {
-	query := "UPDATE users SET name = ? WEHRE id = ?"
+	query := "UPDATE users SET name = ? WHERE id = ?"
 	_, err := changeName.Database.ExecContext(ctx, query, user.NAME(), user.ID())
 	return err
 }
