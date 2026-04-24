@@ -170,7 +170,7 @@ func (changeName *ChangeName) ChangeNameFunction(ctx context.Context, input Chan
 		return err
 	}
 
-	if err := user.ChangeName(input.CurrentName, input.NewName, input.ConfirmNewName); err != nil {
+	if err := user.ChangeName(input.CurrentName, input.NewName); err != nil {
 		return err
 	}
 
