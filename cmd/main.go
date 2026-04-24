@@ -68,7 +68,8 @@ func main() {
 	mux.HandleFunc("/register", handlerRegister.RegisterHandler)	
 	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
 
-	mux.HandleFunc("/change", handlerChangeName.ChangeNameHandler)
+	auth := middleware.AuthMiddleware(jwtKey)
+	mux.Handle("/change", auth(http.HandlerFunc(handlerChangeName.ChangeNameHandler)))
 
 	handler := http.HandlerFunc(handlerChangeEmail.ChangeEmailHandler)
 	handlerWithMiddleware := middleware.Chain(
