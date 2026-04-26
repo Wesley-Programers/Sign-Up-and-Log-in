@@ -93,6 +93,20 @@ func (user *User) Register(name, email, password string) (*User, error) {
 }
 
 
+func (user *User) RequestPasswordReset(email string) error {
+	cleanEmail := strings.TrimSpace(email)
+	if !strings.HasSuffix(cleanEmail, "@example.com") || cleanEmail == "" {
+		return ErrInvalidEmailFormat
+	}
+
+	if !strings.EqualFold(cleanEmail, user.Email) {
+		return ErrUserNotFound
+	}
+	
+	return nil
+}
+
+
 func (user *User) PasswordValid(password string) error {
 	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 }
@@ -119,5 +133,12 @@ func RestoreLogin(id int, name, email, passwordHash string) *User {
 		Name: name,
 		Email: email,
 		PasswordHash: passwordHash,
+	}
+}
+
+func RestoreRequest(id int, email string) *User {
+	return &User{
+		Id: id,
+		Email: email,
 	}
 }
