@@ -10,18 +10,13 @@ import (
 
 type RedisLimiter struct {
 	client *redis.Client
+	scriptSha string
 }
 
-func NewRedisLimiter(addr string) *RedisLimiter {
-	return &RedisLimiter{
-		client: redis.NewClient(&redis.Options{
-			Addr: addr,
-		}),
-	}
-}
-
-func (rl *RedisLimiter) CheckLimit(ctx context.Context, key string, maxAttempts int, window time.Duration) (bool, error) {
-	fullKey := fmt.Sprintf("rl:%s", key)
+func NewRedisLimiter(addr string) (*RedisLimiter, error) {
+	client := redis.NewClient(&redis.Options{
+		Addr: addr,
+	})
 
 	script := `
 		local current = redis.call("INCR", KEYS[1])
@@ -30,13 +25,26 @@ func (rl *RedisLimiter) CheckLimit(ctx context.Context, key string, maxAttempts 
 		end
 		return current`
 
-	result, err := rl.client.Eval(ctx, script, []string{fullKey}, window.Milliseconds()).Result()
+	sha, err := client.ScriptLoad(context.Background(), script).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	return &RedisLimiter{
+		client: client,
+		scriptSha: sha,
+	}, nil
+}
+
+func (rl *RedisLimiter) CheckLimit(ctx context.Context, key string, maxAttempts int, window time.Duration) (bool, error) {
+	fullKey := fmt.Sprintf("rl:%s", key)
+
+	result, err := rl.client.EvalSha(ctx, rl.scriptSha, []string{fullKey}, window.Milliseconds()).Int64()
 	if err != nil {
 		return false, err
 	}
 
-	count := result.(int64)
-	return int(count) <= maxAttempts, nil
+	return int(result) <= maxAttempts, nil
 }
 
 func (rl *RedisLimiter) ResetLimit(ctx context.Context, key string) error {
