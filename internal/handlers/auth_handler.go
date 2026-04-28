@@ -61,6 +61,9 @@ type LoginRequest struct {
 	NameOrEmail string `json:"nameOrEmail" validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
+type Request struct {
+	Email string `json:"email" validate:"required"`
+}
 
 
 var tmpl = template.Must(template.ParseFS(ui.Files, "templates/reset.html"))
@@ -86,7 +89,6 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 			Password: req.Password,
 		}
 	
-		log.Println("email:", input.Email)
 		err := handler.Service.RegisterFunction(r.Context(), input)
 		if err != nil {
 			MapServiceError(w, err)
@@ -166,25 +168,26 @@ func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *h
 		return
 	}
 
-	log.SetFlags(log.Lshortfile)
-
 	if r.Method == http.MethodPost {
 
-		email := r.FormValue("email")
-
-		ctx := r.Context()
-	
-		err, token := requestHandler.Service.RequestFunction(ctx, email)
-		if err == nil {
-			log.Println("SUCCESS")
-			http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
-			return
-			
-		} else {
-			log.Println("ERROR: ", err)
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		var req Request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
 			return
 		}
+
+		input := service.RequestData{
+			Email: req.Email,
+		}
+	
+		err, token := requestHandler.Service.RequestFunction(r.Context(), input)
+		if err != nil {
+			MapServiceError(w, err)
+			return
+		}
+
+		log.Println("SUCCESS SUCCESS")
+		http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
 	}
 }
 
