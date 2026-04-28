@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 	
 	"ShieldAuth-API/internal/database"
@@ -84,11 +83,6 @@ func NewDeleteAccountStruct(database *sql.DB) *DeleteAccountStruct {
 	}
 }
 
-
-var (
-	test string
-	lock sync.Mutex
-)
 
 func (register *RegisterStruct) Register(ctx context.Context, name, email, password string) error {
 	u := &domain.User{
@@ -178,105 +172,80 @@ func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *dom
 }
 
 
-func (request *RequestStruct) Request(ctx context.Context, email string) (error, int) {
-	var id int
-	var verify string
-	var attempts int
+func(request *RequestStruct) GetID(ctx context.Context, u domain.User) (*domain.User, error) {
+	user := &domain.User{}
 
-	tx, err := request.Database.BeginTx(ctx, nil)
+	query := "SELECT id, email FROM users WHERE email = ? LIMIT 1"
+	err := request.Database.QueryRowContext(ctx, query, u.Email).Scan(&user.Id, &user.Email)
 	if err != nil {
-		return err, 0
-	}
-	defer tx.Rollback()
-
-	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&attempts)
-	if err != nil {
-		return err, 0
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, domain.ErrUserNotFound
+		}
+		return nil, err
 	}
 
-	if attempts >= 5 {
-		return errors.New("ERROR"), 0
-	}
-
-	err = tx.QueryRowContext(ctx, "SELECT id, email FROM users WHERE email = ?", email).Scan(&id, &verify)
-	if err != nil {
-		return err, 0
-	}
-
-	lock.Lock()
-	test = verify
-	lock.Unlock()
-	
-	err = tx.Commit()
-	if err != nil {
-		return err, 0
-	}
-
-	return nil, id
+	return user, nil
 }
 
 
 func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string) {
-	var id int
-	var verify string
-	var token string
-	var used bool
+	// var id int
+	// var verify string
+	// var token string
+	// var used bool
 
-	tx, err := resetPassword.Database.BeginTx(ctx, nil)
-	if err != nil {
-		return err, ""
-	}
-	defer tx.Rollback()
+	// tx, err := resetPassword.Database.BeginTx(ctx, nil)
+	// if err != nil {
+	// 	return err, ""
+	// }
+	// defer tx.Rollback()
 
-	lock.Lock()
-	email := test
-	lock.Unlock()
+	// if newPassword != confirmNewPassword {
+	// 	return errors.New("ERROR"), ""
+	// } else if currentPassword == newPassword {
+	// 	return errors.New("ERROR"), ""
+	// }
 
-	if newPassword != confirmNewPassword {
-		return errors.New("ERROR"), ""
-	} else if currentPassword == newPassword {
-		return errors.New("ERROR"), ""
-	}
+	// err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
+	// if err != nil {
+	// 	return err, ""
+	// }
 
-	err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
-	if err != nil {
-		return err, ""
-	}
+	// passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
+	// if passwordHash != nil {
+	// 	return passwordHash, ""
+	// }
 
-	passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
-	if passwordHash != nil {
-		return passwordHash, ""
-	}
+	// err = tx.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE user_id = ?", id).Scan(&token)
+	// if err != nil {
+	// 	return err, ""
+	// }
 
-	err = tx.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE user_id = ?", id).Scan(&token)
-	if err != nil {
-		return err, ""
-	}
+	// err = tx.QueryRowContext(ctx, "SELECT used FROM reset_password WHERE token = ?", token).Scan(&used)
+	// if err != nil {
+	// 	return err, ""
+	// }
 
-	err = tx.QueryRowContext(ctx, "SELECT used FROM reset_password WHERE token = ?", token).Scan(&used)
-	if err != nil {
-		return err, ""
-	}
+	// allowed, err := LimitOfAttempts(ctx, email)
+	// if err != nil {
+	// 	return err, ""
+	// }
 
-	allowed, err := LimitOfAttempts(ctx, email)
-	if err != nil {
-		return err, ""
-	}
+	// if !allowed {
+	// 	return errors.New("ERROR"), ""
+	// }
 
-	if !allowed {
-		return errors.New("ERROR"), ""
-	}
+	// if used {
+	// 	return errors.New("ERROR"), ""
+	// }
 
-	if used {
-		return errors.New("ERROR"), ""
-	}
+	// err = tx.Commit()
+	// if err != nil {
+	// 	return fmt.Errorf("Repository error: %w", err), ""
+	// }
 
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err), ""
-	}
-
-	return nil, email
+	// return nil, email
+	return nil, ""
 }
 
 
