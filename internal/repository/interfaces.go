@@ -24,7 +24,7 @@ type ChangeEmail interface {
 }
 
 type Request interface {
-	Request(ctx context.Context, email string) (error, int)
+	GetID(ctx context.Context, u domain.User) (*domain.User, error)
 }
 
 type ResetPassword interface {
