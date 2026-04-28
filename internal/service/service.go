@@ -112,6 +112,10 @@ type RegisterData struct {
 	Email string
 	Password string
 }
+type RequestData struct {
+	Id int
+	Email string
+}
 
 
 var (
@@ -190,38 +194,32 @@ func (changeEmail *ChangeEmail) ChangeEmailFunctionTest(ctx context.Context, inp
 	}
 
 	if err := user.ChangeEmail(input.CurrentEmail, input.NewEmail, input.ConfirmNewEmail); err != nil {
-		return err
+		return domain.ErrInternal
 	}
 
 	return changeEmail.Repository.UpdateEmail(ctx, user)
 }
 
 
-func (request *Request) RequestFunction(ctx context.Context, email string) (error, string) {
-	err, id := request.Repository.Request(ctx, email)
+func (request *Request) RequestFunction(ctx context.Context, input RequestData) (error, string) {
+	user, err := request.Repository.GetID(ctx, domain.User{Email: input.Email})
 	if err != nil {
-		return err, ""
-		
-	} else {
-		token, err := GenerateTokens()
-		if err != nil {
-			return err, ""
-
-		}
-
-		lock.Lock()
-		test = token
-		lock.Unlock()
-
-		expiresAt := time.Now().Add(10 * time.Minute)
-		tokenHash := tokenHash(token)
-		err = repository.InsertInto(ctx, id, tokenHash, expiresAt)
-		if err != nil {
-			return err, ""
-		}
-
-		return nil, token
+		return domain.ErrUserNotFound, ""
 	}
+
+	token, err := GenerateTokens()
+	if err != nil {
+		return domain.ErrInternal, ""
+	}
+
+	expiresAt := time.Now().Add(10 * time.Minute)
+	tokenHash := tokenHash(token)
+	err = repository.InsertInto(ctx, user.Id, tokenHash, expiresAt)
+	if err != nil {
+		return domain.ErrInternal, ""
+	}
+
+	return nil, token
 }
 
 
