@@ -175,7 +175,7 @@ func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *dom
 func(request *RequestStruct) GetID(ctx context.Context, u domain.User) (*domain.User, error) {
 	user := &domain.User{}
 
-	query := "SELECT id, email FROM users WHERE email = ? LIMIT 1"
+	query := "SELECT id, email FROM users WHERE email = ?"
 	err := request.Database.QueryRowContext(ctx, query, u.Email).Scan(&user.Id, &user.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -249,16 +249,23 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 }
 
 
-func (validToken *ValidTokenStruct) ValidToken(ctx context.Context, token, secondToken string) error {
-	err := validToken.Database.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE token = ? AND used = FALSE", token).Scan(&secondToken)
+func (valid *ValidTokenStruct) ValidToken(ctx context.Context, hash string) (string, error) {
+	var email string
+
+	err := valid.Database.QueryRowContext(ctx, `SELECT email FROM reset_password WHERE token = ? AND used = FALSE AND expires_at > NOW()`).Scan(&email)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	if token != secondToken {
-		return errors.New("Invalid token")
-	}
-	return nil
+	return email, nil
+}
+func (valid *ValidTokenStruct) SaveResetPassword(ctx context.Context, email, tokenHash string, expiresAt time.Time) error {
+	_, err := valid.Database.ExecContext(ctx, "INSERT INTO reset_password (user_id, token, expires_at) VALUES (?, ?, ?, FALSE)", email, tokenHash, expiresAt)
+	return err
+}
+func (valid *ValidTokenStruct) MarkUsed(ctx context.Context, tokenHash string) error {
+	_, err := valid.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
+	return err
 }
 
 
@@ -387,15 +394,6 @@ func LimitOfAttempts(ctx context.Context, email string) (bool, error) {
 		return false, err
 	}
 	return true, nil
-}
-
-
-func InsertInto(ctx context.Context, userID int, token string, expiresAt time.Time) error {
-	_, err := database.Connect().ExecContext(ctx, "INSERT INTO reset_password (user_id, token, expires_at) VALUES (?, ?, ?)", userID, token, expiresAt)
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
-	}
-	return nil
 }
 
 
