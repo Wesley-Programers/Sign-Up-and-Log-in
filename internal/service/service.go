@@ -2,17 +2,17 @@ package service
 
 import (
 	"context"
-	"database/sql"
-	"encoding/hex"
 	"crypto/rand"
+	"crypto/sha256"
+	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
-	"crypto/sha256"
-	"sync"
 	"time"
 	"unicode"
-	
+
 	"ShieldAuth-API/internal/domain"
 	"ShieldAuth-API/internal/repository"
 
@@ -20,6 +20,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Service interface {
+	RequestReset(ctx context.Context, email string) (string, error)
+	ValidToken(ctx context.Context, token string) (string, error)
+}
 
 type Register struct {
 	Repository repository.User
@@ -33,17 +37,15 @@ type ChangeName struct {
 type ChangeEmail struct {
 	Repository repository.ChangeEmail
 }
-type Request struct {
-	Repository repository.Request
+type service struct {
+	userRepo repository.UserRepository
+	tokenRepo repository.ResetTokenRepository
 }
 type ResetPassword struct {
 	Repository repository.ResetPassword
 }
 type DeleteAccount struct {
 	Repository repository.DeleteAccount
-}
-type ValidToken struct {
-	Repository repository.ValidToken
 }
 
 
@@ -67,9 +69,13 @@ func NewChangeEmail(repository repository.ChangeEmail) *ChangeEmail {
 		Repository: repository,
 	}
 }
-func NewRequest(repository repository.Request) *Request {
-	return &Request{
-		Repository: repository,
+func NewService(
+	userRepo repository.UserRepository,
+	tokenRepo repository.ResetTokenRepository,
+) Service {
+	return &service{
+		userRepo: userRepo,
+		tokenRepo: tokenRepo,
 	}
 }
 func NewResetPassword(repository repository.ResetPassword) *ResetPassword {
@@ -79,11 +85,6 @@ func NewResetPassword(repository repository.ResetPassword) *ResetPassword {
 }
 func NewDeleteAccount(repository repository.DeleteAccount) *DeleteAccount {
 	return &DeleteAccount{
-		Repository: repository,
-	}
-}
-func NewValidToken(repository repository.ValidToken) *ValidToken {
-	return &ValidToken{
 		Repository: repository,
 	}
 }
@@ -112,16 +113,7 @@ type RegisterData struct {
 	Email string
 	Password string
 }
-type RequestData struct {
-	Id int
-	Email string
-}
 
-
-var (
-	test string
-	lock sync.Mutex
-)
 
 func (register *Register) RegisterFunction(ctx context.Context, input RegisterData) error {
 	validPassword, message := VerifyPassword(input.Password)
@@ -201,38 +193,48 @@ func (changeEmail *ChangeEmail) ChangeEmailFunctionTest(ctx context.Context, inp
 }
 
 
-func (request *Request) RequestFunction(ctx context.Context, input RequestData) (error, string) {
-	user, err := request.Repository.GetID(ctx, domain.User{Email: input.Email})
+func (s *service) RequestReset(ctx context.Context, email string) (string, error) {
+	user, err := s.userRepo.GetByEmail(ctx, email)
 	if err != nil {
-		return domain.ErrUserNotFound, ""
+		return "", nil
 	}
 
 	token, err := GenerateTokens()
 	if err != nil {
-		return domain.ErrInternal, ""
+		return "", fmt.Errorf("generate token: %w", err)
 	}
 
-	expiresAt := time.Now().Add(10 * time.Minute)
-	tokenHash := tokenHash(token)
-	err = repository.InsertInto(ctx, user.Id, tokenHash, expiresAt)
-	if err != nil {
-		return domain.ErrInternal, ""
+	hash := tokenHash(token)
+	expiresAt := time.Now().Add(15 * time.Minute)
+
+	if err := s.tokenRepo.InvalidateAll(ctx, user.Id); err != nil {
+		return "", fmt.Errorf("invalidate token: %w", err)
 	}
 
-	return nil, token
+	if err := s.tokenRepo.Save(ctx, user.Id, hash, expiresAt); err != nil {
+		return "", fmt.Errorf("save token: %w", err)
+	}
+
+	return token, nil
 }
 
 
-func (validToken *ValidToken) ValidTokenFunction(ctx context.Context) error {
-	token := test
-	var test string
-	hash := tokenHash(token)
-	err := validToken.Repository.ValidToken(ctx, hash, test)
-	if err != nil {
-		return fmt.Errorf("Service error: %w", err)
+func (s *service) ValidToken(ctx context.Context, token string) (string, error) {
+	if token == "" {
+		return "", domain.ErrInvalidToken
 	}
 
-	return nil
+	hash := tokenHash(token)
+	userID, err := s.tokenRepo.FindValid(ctx, hash)
+	if err != nil {
+		return "", domain.ErrInvalidToken
+	}
+
+	if err := s.tokenRepo.MarkUsed(ctx, hash); err != nil {
+		return "", fmt.Errorf("mark token used: %w", err)
+	}
+	
+	return userID, nil
 }
 
 
@@ -328,7 +330,8 @@ func GenerateTokens() (string, error) {
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(bytes), nil
+	return base64.URLEncoding.EncodeToString(bytes), nil
+	// return hex.EncodeToString(bytes), nil
 }
 
 
