@@ -172,19 +172,63 @@ func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *dom
 }
 
 
-func(request *RequestStruct) GetID(ctx context.Context, u domain.User) (*domain.User, error) {
+func(r *RequestStruct) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	user := &domain.User{}
 
-	query := "SELECT id, email FROM users WHERE email = ?"
-	err := request.Database.QueryRowContext(ctx, query, u.Email).Scan(&user.Id, &user.Email)
+	err := r.Database.QueryRowContext(ctx, `SELECT id, email FROM users WHERE email = ?`, email).Scan(&user.Id, &user.Email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrUserNotFound
 		}
-		return nil, err
+		return nil, fmt.Errorf("get user by email: %w", err)
 	}
 
 	return user, nil
+}
+
+
+func (r *RequestStruct) InvalidateAll(ctx context.Context, userID int) error {
+	_, err := r.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE user_id = ? AND used = FALSE`, userID)
+	if err != nil {
+		return fmt.Errorf("invalidate tokens: %w", err)
+	}
+
+	return nil
+}
+
+
+func (r *RequestStruct) Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
+	_, err := r.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
+	if err != nil {
+		return fmt.Errorf("save reset token: %w", err)
+	}
+
+	return nil
+}
+
+
+func (r *RequestStruct) FindValid(ctx context.Context, tokenHash string) (string, error) {
+	var userID string
+
+	err := r.Database.QueryRowContext(ctx, `SELECT user_id FROM reset_password WHERE token_hash = ? AND used = FALSE AND expires_at > ?`, tokenHash, time.Now()).Scan(&userID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", domain.ErrInvalidToken
+		}
+		return "", fmt.Errorf("find valid token: %w", err)
+	}
+
+	return userID, nil
+}
+
+
+func (r *RequestStruct) MarkUsed(ctx context.Context, tokenHash string) error {
+	_, err := r.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
+	if err != nil {
+		return fmt.Errorf("mark token used: %w", err)
+	}
+
+	return  nil
 }
 
 
@@ -246,26 +290,6 @@ func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, cur
 
 	// return nil, email
 	return nil, ""
-}
-
-
-func (valid *ValidTokenStruct) ValidToken(ctx context.Context, hash string) (string, error) {
-	var email string
-
-	err := valid.Database.QueryRowContext(ctx, `SELECT email FROM reset_password WHERE token = ? AND used = FALSE AND expires_at > NOW()`).Scan(&email)
-	if err != nil {
-		return "", err
-	}
-
-	return email, nil
-}
-func (valid *ValidTokenStruct) SaveResetPassword(ctx context.Context, email, tokenHash string, expiresAt time.Time) error {
-	_, err := valid.Database.ExecContext(ctx, "INSERT INTO reset_password (user_id, token, expires_at) VALUES (?, ?, ?, FALSE)", email, tokenHash, expiresAt)
-	return err
-}
-func (valid *ValidTokenStruct) MarkUsed(ctx context.Context, tokenHash string) error {
-	_, err := valid.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
-	return err
 }
 
 
