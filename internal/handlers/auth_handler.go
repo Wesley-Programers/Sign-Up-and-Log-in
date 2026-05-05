@@ -6,7 +6,8 @@ import (
 	"net/http"
 	"text/template"
 	"time"
-	
+
+	"ShieldAuth-API/internal/domain"
 	"ShieldAuth-API/internal/response"
 	"ShieldAuth-API/internal/security"
 	"ShieldAuth-API/internal/service"
@@ -22,10 +23,7 @@ type LoginHandler struct {
 	Limiter *security.RedisLimiter
 }
 type RequestHandler struct {
-	Service *service.Request
-}
-type ValidTokenHandler struct {
-	Service *service.ValidToken
+	service service.Service
 }
 
 
@@ -40,14 +38,9 @@ func NewLoginHandler(service *service.VerifyLogin, limiter *security.RedisLimite
 		Limiter: limiter,
 	}
 }
-func NewRequestHandler(service *service.Request) *RequestHandler {
+func NewRequestHandler(s service.Service) *RequestHandler {
 	return &RequestHandler{
-		Service: service,
-	}
-}
-func NewValidTokenHandler(service *service.ValidToken) *ValidTokenHandler {
-	return &ValidTokenHandler{
-		Service: service,
+		service: s,
 	}
 }
 
@@ -60,9 +53,6 @@ type RegisterRequest struct {
 type LoginRequest struct {
 	NameOrEmail string `json:"nameOrEmail" validate:"required"`
 	Password string `json:"password" validate:"required"`
-}
-type Request struct {
-	Email string `json:"email" validate:"required"`
 }
 
 
@@ -161,60 +151,65 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 }
 
 
-func (requestHandler *RequestHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
+func (h *RequestHandler) RequestReset(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	if r.Method == http.MethodPost {
-
-		var req Request
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
-			return
-		}
-
-		input := service.RequestData{
-			Email: req.Email,
-		}
-	
-		err, token := requestHandler.Service.RequestFunction(r.Context(), input)
-		if err != nil {
-			MapServiceError(w, err)
-			return
-		}
-
-		log.Println("SUCCESS SUCCESS")
-		http.Redirect(w, r, "/valid?token="+token, http.StatusSeeOther)
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
+
+	var req struct {
+		Email string `json:"email"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "invalid request", err)
+		return
+	}
+
+	_, err := h.service.RequestReset(r.Context(), req.Email)
+	if err != nil {
+		MapServiceError(w, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]string{
+		"message": "if email exists, reset link was sent",
+	})
 }
 
 
-func (validToken *ValidTokenHandler) ValidTokenHandler(w http.ResponseWriter, r *http.Request) {
+func (h *RequestHandler) ValidToken(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	log.SetFlags(log.Lshortfile)
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
 
-	ctx := r.Context()
-
-	err := validToken.Service.ValidTokenFunction(ctx)
 	token := r.URL.Query().Get("token")
-	
-	if err == nil && token != "" {
-		w.WriteHeader(http.StatusOK)
-		tmpl.Execute(w, nil)
-		log.Println("SUCCESS")
-
-	} else {
-		log.Println("ERROR: ", err)
-		http.Error(w, "ERROR", http.StatusBadRequest)
+	if token == "" {
+		MapServiceError(w, domain.ErrInvalidToken)
 		return
 	}
-}
 
+	_, err := h.service.ValidToken(r.Context(), token)
+	if err != nil {
+		MapServiceError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "valid",
+	})
+}
