@@ -2,27 +2,23 @@ package service
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
 	"time"
-	"unicode"
 
 	"ShieldAuth-API/internal/domain"
 	"ShieldAuth-API/internal/repository"
-
-	"github.com/golang-jwt/jwt/v5"
-	"golang.org/x/crypto/bcrypt"
+	"ShieldAuth-API/internal/security"
 )
 
 type Service interface {
 	RequestReset(ctx context.Context, email string) (string, error)
 	ValidToken(ctx context.Context, token string) (string, error)
+}
+type Security interface {
+	GenerateToken() (string, error)
+	TokenHash(token string) (string)
 }
 
 type Register struct {
@@ -40,6 +36,7 @@ type ChangeEmail struct {
 type service struct {
 	userRepo repository.UserRepository
 	tokenRepo repository.ResetTokenRepository
+	security Security
 }
 type ResetPassword struct {
 	Repository repository.ResetPassword
@@ -72,10 +69,12 @@ func NewChangeEmail(repository repository.ChangeEmail) *ChangeEmail {
 func NewService(
 	userRepo repository.UserRepository,
 	tokenRepo repository.ResetTokenRepository,
+	security Security,
 ) Service {
 	return &service{
 		userRepo: userRepo,
 		tokenRepo: tokenRepo,
+		security: security,
 	}
 }
 func NewResetPassword(repository repository.ResetPassword) *ResetPassword {
@@ -116,12 +115,12 @@ type RegisterData struct {
 
 
 func (register *Register) RegisterFunction(ctx context.Context, input RegisterData) error {
-	validPassword, message := VerifyPassword(input.Password)
+	validPassword, message := security.VerifyPassword(input.Password)
 	if !validPassword {
 		return errors.New(message)
 	}
 
-	hash, err := HashPassword(input.Password)
+	hash, err := security.HashPassword(input.Password)
 	if err != nil && validPassword {
 		return err
 	}
@@ -199,12 +198,12 @@ func (s *service) RequestReset(ctx context.Context, email string) (string, error
 		return "", nil
 	}
 
-	token, err := GenerateTokens()
+	token, err := security.GenerateTokens()
 	if err != nil {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
 
-	hash := tokenHash(token)
+	hash := security.TokenHash(token)
 	expiresAt := time.Now().Add(15 * time.Minute)
 
 	if err := s.tokenRepo.InvalidateAll(ctx, user.Id); err != nil {
@@ -224,7 +223,7 @@ func (s *service) ValidToken(ctx context.Context, token string) (string, error) 
 		return "", domain.ErrInvalidToken
 	}
 
-	hash := tokenHash(token)
+	hash := security.TokenHash(token)
 	userID, err := s.tokenRepo.FindValid(ctx, hash)
 	if err != nil {
 		return "", domain.ErrInvalidToken
@@ -239,12 +238,12 @@ func (s *service) ValidToken(ctx context.Context, token string) (string, error) 
 
 
 func (resetPasword *ResetPassword) ResetPasswordFunction(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) error {
-	validPassword, message := VerifyPassword(newPassword)
+	validPassword, message := security.VerifyPassword(newPassword)
 	if !validPassword {
 		return errors.New(message)
 	}
 
-	hash, err := HashPassword(newPassword)
+	hash, err := security.HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
@@ -276,88 +275,10 @@ func (delete *DeleteAccount) DeleteAccountFunction(ctx context.Context, email, p
 }
 
 
-func VerifyPassword(password string) (bool, string) {
-
-	if len(password) < 8 {
-		return false, "short password"
-	}
-
-	if len(password) >= 150 {
-		return false, "long password"
-	}
-
-	var (
-		upper = false
-		lower = false
-		special = false
-	)
-
-	for _, char := range password {
-		switch {
-		case unicode.IsUpper(char):
-			upper = true
-		
-		case unicode.IsLower(char):
-			lower = true
-
-		case unicode.IsPunct(char) || unicode.IsSymbol(char):
-			special = true
-		}
-	}
-
-	if !upper {
-		return false, "at least one capital letter"
-	}
-	if !lower {
-		return false, "at least one lowercase letter"
-	}
-	if !special {
-		return false, "at least one special character"
-	}
-
-	return true, ""
-}
-
-
-func HashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(bytes), err
-}
-
-
-func GenerateTokens() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		return "", err
-	}
-	return base64.URLEncoding.EncodeToString(bytes), nil
-	// return hex.EncodeToString(bytes), nil
-}
-
-
 func StartToRemoverExpiredTokens(database *sql.DB) {
 	ticker := time.NewTicker(20 * time.Second)
 
 	for range ticker.C {
 		repository.RemoveExpiredToken(database)
 	}
-}
-
-
-func tokenHash(token string) string {
-	hash := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(hash[:])
-}
-
-
-func TokenJWT(userID int) (string, error) {
-	claims := jwt.MapClaims{
-		"sub": userID,
-		"exp": time.Now().Add(time.Hour * 24).Unix(),
-		"iat": time.Now().Unix(),
-	}
-
-	tokenJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	secretKey := os.Getenv("JWT_KEY")
-	return tokenJwt.SignedString([]byte(secretKey))
 }
