@@ -44,6 +44,9 @@ type ResetPassword struct {
 type DeleteAccount struct {
 	Repository repository.DeleteAccount
 }
+type ValidTesting struct {
+	Repository repository.ResetTokenRepository
+}
 
 
 func NewUserStruct(repository repository.User) *Register {
@@ -75,6 +78,11 @@ func NewService(
 		userRepo: userRepo,
 		tokenRepo: tokenRepo,
 		security: security,
+	}
+}
+func NewValidToken(repository repository.ResetTokenRepository) *ValidTesting {
+	return &ValidTesting{
+		Repository: repository,
 	}
 }
 func NewResetPassword(repository repository.ResetPassword) *ResetPassword {
@@ -198,12 +206,12 @@ func (s *service) RequestReset(ctx context.Context, email string) (string, error
 		return "", nil
 	}
 
-	token, err := security.GenerateTokens()
+	token, err := s.security.GenerateToken()
 	if err != nil {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
 
-	hash := security.TokenHash(token)
+	hash := s.security.TokenHash(token)
 	expiresAt := time.Now().Add(15 * time.Minute)
 
 	if err := s.tokenRepo.InvalidateAll(ctx, user.Id); err != nil {
@@ -223,7 +231,7 @@ func (s *service) ValidToken(ctx context.Context, token string) (string, error) 
 		return "", domain.ErrInvalidToken
 	}
 
-	hash := security.TokenHash(token)
+	hash := s.security.TokenHash(token)
 	userID, err := s.tokenRepo.FindValid(ctx, hash)
 	if err != nil {
 		return "", domain.ErrInvalidToken
