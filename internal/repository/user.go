@@ -72,13 +72,13 @@ func NewResetPasswordStruct(database *sql.DB) *ResetPasswordStruct {
 		Database: database,
 	}
 }
-func NewValidTokenStruct(database *sql.DB) *ValidTokenStruct {
-	return &ValidTokenStruct{
+func NewDeleteAccountStruct(database *sql.DB) *DeleteAccountStruct {
+	return &DeleteAccountStruct{
 		Database: database,
 	}
 }
-func NewDeleteAccountStruct(database *sql.DB) *DeleteAccountStruct {
-	return &DeleteAccountStruct{
+func NewValidTokenStruct(database *sql.DB) *ValidTokenStruct {
+	return &ValidTokenStruct{
 		Database: database,
 	}
 }
@@ -187,8 +187,8 @@ func(r *RequestStruct) GetByEmail(ctx context.Context, email string) (*domain.Us
 }
 
 
-func (r *RequestStruct) InvalidateAll(ctx context.Context, userID int) error {
-	_, err := r.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE user_id = ? AND used = FALSE`, userID)
+func (v *ValidTokenStruct) InvalidateAll(ctx context.Context, userID int) error {
+	_, err := v.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE user_id = ? AND used = FALSE`, userID)
 	if err != nil {
 		return fmt.Errorf("invalidate tokens: %w", err)
 	}
@@ -197,8 +197,8 @@ func (r *RequestStruct) InvalidateAll(ctx context.Context, userID int) error {
 }
 
 
-func (r *RequestStruct) Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
-	_, err := r.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
+func (v *ValidTokenStruct) Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
+	_, err := v.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
 	if err != nil {
 		return fmt.Errorf("save reset token: %w", err)
 	}
@@ -207,10 +207,10 @@ func (r *RequestStruct) Save(ctx context.Context, userID int, tokenHash string, 
 }
 
 
-func (r *RequestStruct) FindValid(ctx context.Context, tokenHash string) (string, error) {
+func (v *ValidTokenStruct) FindValid(ctx context.Context, tokenHash string) (string, error) {
 	var userID string
 
-	err := r.Database.QueryRowContext(ctx, `SELECT user_id FROM reset_password WHERE token_hash = ? AND used = FALSE AND expires_at > ?`, tokenHash, time.Now()).Scan(&userID)
+	err := v.Database.QueryRowContext(ctx, `SELECT user_id FROM reset_password WHERE token_hash = ? AND used = FALSE AND expires_at > ?`, tokenHash, time.Now()).Scan(&userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return "", domain.ErrInvalidToken
@@ -222,8 +222,8 @@ func (r *RequestStruct) FindValid(ctx context.Context, tokenHash string) (string
 }
 
 
-func (r *RequestStruct) MarkUsed(ctx context.Context, tokenHash string) error {
-	_, err := r.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
+func (v *ValidTokenStruct) MarkUsed(ctx context.Context, tokenHash string) error {
+	_, err := v.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
 	if err != nil {
 		return fmt.Errorf("mark token used: %w", err)
 	}
