@@ -7,8 +7,13 @@ import (
 	"encoding/hex"
 )
 
+type securityStruct struct{}
 
-func GenerateTokens() (string, error) {
+func Security() *securityStruct {
+	return &securityStruct{}
+}
+
+func (s *securityStruct) GenerateToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
@@ -16,8 +21,7 @@ func GenerateTokens() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-
-func TokenHash(token string) string {
+func (s *securityStruct) TokenHash(token string) string {
 	hash := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(hash[:])
 }
