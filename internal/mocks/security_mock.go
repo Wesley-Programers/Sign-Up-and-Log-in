@@ -12,6 +12,6 @@ func (m *SecurityMock) GenerateToken() (string, error) {
 }
 
 func (m *SecurityMock) TokenHash(token string) string {
-	args := m.Called()
+	args := m.Called(token)
 	return args.String(0)
 }
