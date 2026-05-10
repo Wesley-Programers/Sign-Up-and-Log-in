@@ -3,59 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset the password</title>
+    <title>Reset Password</title>
 </head>
 <body>
-
-    <form onsubmit="return false;" id="resetForm">
-        <input type="password" name="currentPassword" id="currentPassword" required placeholder="Your password">
-        <input type="password" name="newPassword" id="newPassword" required placeholder="Your new password">
-        <input type="password" name="confirmNewPassword" id="confirmPassword" required placeholder="Confirm the password">
-
-        <button type="submit" id="button">SEND</button>
-    </form>
     
+    <div class="">
+        <h2>Reset Password</h2>
+
+        <form id="resetForm">
+            <label>Current password</label>
+            <input type="password" name="currentPassword" id="" required>
+
+            <label>New password</label>
+            <input type="password" name="newPassword" id="" required>
+
+            <label>Confirm password</label>
+            <input type="password" name="confirmPassword" id="" required>
+
+
+            <button type="submit" id="button">Reset</button>
+
+            <div id="message" class="message"></div>
+        </form>
+    </div>
+
     <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            let resetForm = document.getElementById("resetForm");
-            let button = document.getElementById("button");
+        const form = document.getElementById("resetForm");
+        const button = document.getElementById("button");
+        const message = document.getElementById("message");
 
-            resetForm.addEventListener("submit", async (e) => {
-                e.preventDefault();
-                button.disabled = true;
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.className = "message" = type;
+        };
 
-                const formData = new FormData(e.target)
-                const data = new URLSearchParams(formData)
-                
-                try {
-                    
-                    const fetchResetPassword = await fetch("http://127.0.0.1:8000/reset/password", {
-                        method: "POST",
-                        body: data,
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        }
-                    });
+        form.addEventListener("click", async (e) => {
+            e.preventDefault();
 
-                    const status = fetchResetPassword.status
-                    const message = await fetchResetPassword.text()
-                    alert(`Status: ${status} Message: ${message}`);
+            const data = new FormData(form);
+            const current = data.get("currentPassword");
+            const newPassword = data.get("newPassword");
+            const confirm = data.get("confirmPassword");
 
-                    if (status === 200 && message === "VALID") {
-                        alert("SUCCESS");
-                    } else {
-                        alert("ERROR");
-                    }
+            if (newPassword !== confirm) {
+                showMessage("Password do not match", "error");
+                return;
+            }
 
-                } catch(error) {
-                    console.error("ERROR: ", error)
-                    alert("SOME ERROR");
+            button.disabled = true;
+            try {
 
-                } finally {
-                    button.disabled = false;
-                };
-            });
+                const res = await fetch("http:/127.0.0.1:8000/reset/password", {
+                    method: "POST",
+                    body: new URLSearchParams(data)
+                });
+
+                const text = await res.text();
+
+                if (res.ok) {
+                    showMessage("Password updated successfully", "success")
+                } else {
+                    showMessage(text || "Error resetting password", "error")
+                }
+
+            } catch (err) {
+                showMessage("Network error", "error")
+            } finally {
+                button.disabled = false;
+            };
+
         });
+
     </script>
 </body>
 </html>
