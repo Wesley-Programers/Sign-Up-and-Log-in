@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"log"
 	"time"
-	
-	"ShieldAuth-API/internal/database"
+
 	"ShieldAuth-API/internal/domain"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,11 +33,15 @@ type RequestStruct struct {
 }
 type ResetPasswordStruct struct {
 	Database *sql.DB
+	redis *redis.Client
 }
 type ValidTokenStruct struct {
 	Database *sql.DB
 }
 type DeleteAccountStruct struct {
+	Database *sql.DB
+}
+type SessionAndAudit struct {
 	Database *sql.DB
 }
 
@@ -232,64 +236,30 @@ func (v *ValidTokenStruct) MarkUsed(ctx context.Context, tokenHash string) error
 }
 
 
-func (resetPassword *ResetPasswordStruct) ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string) {
-	// var id int
-	// var verify string
-	// var token string
-	// var used bool
+func (r *ResetPasswordStruct) AllowResetAttempt(ctx context.Context, email string) error {
 
-	// tx, err := resetPassword.Database.BeginTx(ctx, nil)
-	// if err != nil {
-	// 	return err, ""
-	// }
-	// defer tx.Rollback()
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
-	// if newPassword != confirmNewPassword {
-	// 	return errors.New("ERROR"), ""
-	// } else if currentPassword == newPassword {
-	// 	return errors.New("ERROR"), ""
-	// }
+	key := fmt.Sprintf("reset_attempts:%s", email)
 
-	// err = tx.QueryRowContext(ctx, "SELECT id, password FROM users WHERE email = ?", email).Scan(&id, &verify)
-	// if err != nil {
-	// 	return err, ""
-	// }
+	count, err := r.redis.Incr(ctx, key).Result()
+	if err != nil {
+		return fmt.Errorf("redis incr failed: %w", err)
+	}
 
-	// passwordHash := bcrypt.CompareHashAndPassword([]byte(verify), []byte(currentPassword))
-	// if passwordHash != nil {
-	// 	return passwordHash, ""
-	// }
+	if count == 1 {
+		err = r.redis.Expire(ctx, key, time.Hour).Err()
+		if err != nil {
+			return fmt.Errorf("redis expire failed: %w", err)
+		}
+	}
 
-	// err = tx.QueryRowContext(ctx, "SELECT token FROM reset_password WHERE user_id = ?", id).Scan(&token)
-	// if err != nil {
-	// 	return err, ""
-	// }
+	if count > 5 {
+		return fmt.Errorf("too many attempts")
+	}
 
-	// err = tx.QueryRowContext(ctx, "SELECT used FROM reset_password WHERE token = ?", token).Scan(&used)
-	// if err != nil {
-	// 	return err, ""
-	// }
-
-	// allowed, err := LimitOfAttempts(ctx, email)
-	// if err != nil {
-	// 	return err, ""
-	// }
-
-	// if !allowed {
-	// 	return errors.New("ERROR"), ""
-	// }
-
-	// if used {
-	// 	return errors.New("ERROR"), ""
-	// }
-
-	// err = tx.Commit()
-	// if err != nil {
-	// 	return fmt.Errorf("Repository error: %w", err), ""
-	// }
-
-	// return nil, email
-	return nil, ""
+	return nil
 }
 
 
@@ -354,83 +324,59 @@ func RemoveExpiredToken(database *sql.DB) error {
 }
 
 
-func UpdatePassword(ctx context.Context, hash, email string) error {
-	var id int
-	tx, err := database.Connect().BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
-	}
-	defer tx.Rollback()
+func (r *ResetPasswordStruct) UpdatePassword(ctx context.Context, tokenHash []byte, passwordHash string) error {
+	
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
-	err = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE email = ?", email).Scan(&id)
+	tx, err := r.Database.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("begin tx failed: %w", err)
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE users SET password = ? WHERE email = ?", hash, email)
+	result, err := tx.ExecContext(ctx, `UPDATE reset_password SET used = true, consumed_at = NOW() WHERE token_hash = ? AND used = false AND expires_at > NOW()`, tokenHash)
 	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
+		return fmt.Errorf("consume token failed: %w", err)
 	}
 
-	_, err = tx.ExecContext(ctx, "UPDATE reset_password SET used = true WHERE user_id = ?", id)
+	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
+		return fmt.Errorf("rows affected failed: %w", err)
+	}
+
+	if rowsAffected != 1 {
+		return domain.ErrInvalidToken
+	}
+
+	_, err = tx.ExecContext(ctx, `UPDATE users u INNER JOIN reset_password rp ON rp.user_id = u.id SET u.password = ? WHERE rp.token = ?`, passwordHash, tokenHash)
+	if err != nil {
+		return fmt.Errorf("update password failed: %w", err)
 	}
 
 	err = tx.Commit()
 	if err != nil {
-		return fmt.Errorf("Repository error: %w", err)
+		return fmt.Errorf("commit failed: %w", err)
 	}
+
 	return nil
 }
 
 
-func LimitOfAttempts(ctx context.Context, email string) (bool, error) {
-	var emailCount int
+func (s *SessionAndAudit) InsertIntoLoginAudits(ctx context.Context, email string, success bool, failureReason string) error {
+	
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
 
-	tx, err := database.Connect().BeginTx(ctx, nil)
+	_, err := s.Database.ExecContext(ctx, `INSERT INTO login_attempts_audit (email, success, failure_reason, attempted_at) VALUES (?, ?, ?, NOW())`, email, success, failureReason)
 	if err != nil {
-		return false, err
-	}
-	defer tx.Rollback()
-
-	_, err = tx.ExecContext(ctx, "DELETE FROM attempts WHERE attempted_at < NOW() - INTERVAL 24 HOUR")
-	if err != nil {
-		return false, err
+		return fmt.Errorf("insert login audit failed: %w", err)
 	}
 
-	err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM attempts WHERE email = ? AND attempted_at > NOW() - INTERVAL 1 HOUR", email).Scan(&emailCount)
-	if err != nil {
-		return false, err
-	}
-
-	if emailCount >= 5 {
-		return false, errors.New("ERROR")
-	}
-
-	_, err = tx.ExecContext(ctx, "INSERT INTO attempts (email, attempted_at) VALUES (?, NOW())", email)
-	if err != nil {
-		return false, err
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	return nil
 }
 
 
-func InsertIntoLoginAttempts(ctx context.Context, name, email string) error {
-
-	_, err := database.Connect().ExecContext(ctx, "DELETE FROM login_attempts WHERE (email = ? OR name = ?) AND attempt_in < NOW() - INTERVAL 1 DAY", email, name)
-	if err != nil {
-		return err
-	}
-
-	_, err = database.Connect().ExecContext(ctx, "INSERT INTO login_attempts(name, email, attempt_in, success) VALUES(?, ?, NOW(), FALSE)", name, email)
-	if err != nil {
-		return err
-	}
-	return nil
+func (s *SessionAndAudit) CreateSession(ctx context.Context, userID int, refreshTokenHash string) error {
+	_, err := s.Database.ExecContext(ctx, `INSERT INTO sessions (user_id, refresh_token_hash, revoked, expires_at, created_at) VALUES (?, ?, false, DATE_ADD(NOW(), INTERNAL 7 DAY), NOW())`, userID, refreshTokenHash)
+	return err
 }
