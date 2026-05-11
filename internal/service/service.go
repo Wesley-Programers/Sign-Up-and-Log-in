@@ -120,6 +120,11 @@ type RegisterData struct {
 	Email string
 	Password string
 }
+type ResetPasswordData struct {
+	CurrentPassword string
+	NewPasword string
+	ConfirmPassword string
+}
 
 
 func (register *Register) RegisterFunction(ctx context.Context, input RegisterData) error {
@@ -245,33 +250,29 @@ func (s *service) ValidToken(ctx context.Context, token string) (string, error) 
 }
 
 
-func (resetPasword *ResetPassword) ResetPasswordFunction(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) error {
-	validPassword, message := security.VerifyPassword(newPassword)
-	if !validPassword {
-		return errors.New(message)
+func (r *ResetPassword) ResetPasswordFunction(ctx context.Context, token string, input ResetPasswordData) error {
+	if input.NewPasword != input.ConfirmPassword {
+		return errors.New("password do not match")
 	}
 
-	hash, err := security.HashPassword(newPassword)
-	if err != nil {
-		return err
+	valid, msg := security.VerifyPassword(input.NewPasword)
+	if !valid {
+		return errors.New(msg)
 	}
 
-	err, email := resetPasword.Repository.ResetPassword(ctx, currentPassword, newPassword, confirmNewPassword)
+	err := r.Repository.AllowReset(ctx, token)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(ctx, email)
-		if err != nil {
-			return err
-		}
-		return err
+		return fmt.Errorf("rate limiter error: %w", err)
 	}
-	
-	err = repository.UpdatePassword(ctx, hash, email)
+
+	hashedPassword, err := security.HashPassword(input.NewPasword)
 	if err != nil {
-		_, err = repository.LimitOfAttempts(ctx, email)
-		if err != nil {
-			return err
-		}
-		return err
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	err = r.Repository.UpdatePassword(ctx, []byte(token), hashedPassword)
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
 	}
 
 	return nil
