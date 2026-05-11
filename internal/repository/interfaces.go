@@ -37,7 +37,8 @@ type ResetTokenRepository interface {
 }
 
 type ResetPassword interface {
-	ResetPassword(ctx context.Context, currentPassword, newPassword, confirmNewPassword string) (error, string)
+	AllowReset(ctx context.Context, email string) (error)
+	UpdatePassword(ctx context.Context, tokenHash []byte, passwordHash string) error
 }
 
 type DeleteAccount interface {
