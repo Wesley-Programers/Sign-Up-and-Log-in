@@ -69,17 +69,23 @@ func RunMigrations(db *sql.DB) {
 		log.Fatal("ERROR (migrate instance): ", err)
 	}
 
-	versionBefore, _, _ := m.Version()
+	versionBefore, dirty, err := m.Version()
+	if err != nil && err != migrate.ErrNilVersion {
+		log.Fatal(err)
+	}
+	if dirty {
+		log.Printf("dirty migration state detected at version: %d; forcing recover", versionBefore)
+	}
 
 	err = m.Up()
 	if err != nil {
 		if err == migrate.ErrNoChange {
-			log.Printf("No new migrations to run. Current version: %d", versionBefore)
+			log.Printf("no new migrations to run. Current version: %d", versionBefore)
 			return
 		}
 		log.Fatal("ERROR (running up): ", err)
 	}
 
 	versionAfter, _, _ := m.Version()
-	log.Printf("SUCCESS: Migration applied from version %d to %d", versionBefore, versionAfter)
+	log.Printf("SUCCESS: migration applied from version %d to %d", versionBefore, versionAfter)
 }
