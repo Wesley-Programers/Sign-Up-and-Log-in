@@ -3,35 +3,91 @@ package service
 import (
 	"context"
 	"testing"
-	
+
 	"ShieldAuth-API/internal/domain"
 	"ShieldAuth-API/internal/mocks"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
-func TestRequestReset(t *testing.T) {
+type deps struct {
+	userRepo *mocks.UserRepositoryMock
+	tokenRepo *mocks.ResetTokenRepositoryMock
+	security *mocks.SecurityMock
+	service Service	
+}
+
+func newDeps() *deps {
 	userRepo := new(mocks.UserRepositoryMock)
 	tokenRepo := new(mocks.ResetTokenRepositoryMock)
-	securityMock := new(mocks.SecurityMock)
+	security := new(mocks.SecurityMock)
 
-	s := NewService(userRepo, tokenRepo, securityMock)
 
-	userRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(&domain.User{Id: 123}, nil)
+	return &deps {
+		userRepo: userRepo,
+		tokenRepo: tokenRepo,
+		security: security,
+		service: NewService(userRepo, tokenRepo, security),
+	}
+}
 
-	securityMock.On("GenerateToken").Return("token123", nil)
-	securityMock.On("HashToken", "token123").Return("hashed")
+func TestRequestReset(t *testing.T) {
+	tests := []struct {
+		name string
+		setup func(d *deps)
+		wantToken string
+		wantErr error
+	}{
+		{
+			name: "success",
+			setup: func(d *deps) {
+				d.userRepo.On("GetByEmail", mock.Anything, "test@example.com").Return(&domain.User{Id: 123}, nil)
+				
+				d.security.On("GenerateToken").Return("token123", nil)
 
-	tokenRepo.On("InvalidateAll", mock.Anything, 123).Return(nil)
-	tokenRepo.On("Save", mock.Anything, 123, "hashed", mock.Anything).Return(nil)
+				d.security.On("TokenHash", "token123").Return("hashed")
 
-	token, err := s.RequestReset(context.Background(), "test@example.com")
+				d.tokenRepo.On("InvalidateAll", mock.Anything, 123).Return(nil)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "token123", token)
+				d.tokenRepo.On("Save", mock.Anything, 123, "hashed", mock.Anything).Return(nil)
 
-	userRepo.AssertExpectations(t)
-	tokenRepo.AssertExpectations(t)
-	securityMock.AssertExpectations(t)
+			},
+			wantToken: "token123",
+			wantErr: nil,
+		},
+
+		{
+			name: "user not found",
+			setup: func(d *deps) {
+				d.userRepo.On("GetByEmail", mock.Anything, mock.Anything).Return(nil, domain.ErrUserNotFound)
+			},
+			wantErr: domain.ErrUserNotFound,
+		},
+	}
+	
+	for _, tt := range tests {
+
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			d := newDeps()
+
+			if tt.setup != nil {
+				tt.setup(d)
+			}
+
+			token, err := d.service.RequestReset(context.Background(), "test@example.com")
+			if tt.wantErr != nil {
+				require.ErrorIs(t, err, tt.wantErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.wantToken, token)
+			}
+
+			d.userRepo.AssertExpectations(t)
+			d.tokenRepo.AssertExpectations(t)
+			d.security.AssertExpectations(t)
+		})
+	}
 }
