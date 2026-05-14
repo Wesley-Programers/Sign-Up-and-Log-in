@@ -24,7 +24,10 @@ func main() {
 	}
 	jwtKey := os.Getenv("JWT_KEY")
 
-	limiter := security.NewRedisLimiter("localhost:6379")
+	limiter, err := security.NewRedisLimiter("")
+	if err != nil {
+		log.Fatalf("Error connecting to Redis: %v", err)
+	}
 
 	db := database.Connect()
 	defer db.Close()
@@ -49,9 +52,16 @@ func main() {
 	serviceChangeEmail := service.NewChangeEmail(repositoryChangeEmail)
 	handlerChangeEmail := handlers.NewChangeEmailHandler(serviceChangeEmail)
 
-	repositoryRequest := repository.NewRequestStruct(db)
-	serviceRequest := service.NewRequest(repositoryRequest)
+	userRepo := repository.NewRequestStruct(db)
+	tokenRepo := repository.NewValidTokenStruct(db)
+	security := security.Security()
+	serviceRequest := service.NewService(
+		userRepo,
+		tokenRepo,
+		security,
+	)
 	handlerRequest := handlers.NewRequestHandler(serviceRequest)
+	handlerValidToken := handlers.NewValidTokenHandler(serviceRequest)
 
 	repositoryResetPassword := repository.NewResetPasswordStruct(db)
 	serviceResetPassword := service.NewResetPassword(repositoryResetPassword)
@@ -60,10 +70,6 @@ func main() {
 	repositoryDeleteAccount := repository.NewDeleteAccountStruct(db)
 	serviceDeleteAccount := service.NewDeleteAccount(repositoryDeleteAccount)
 	handlerDeleteAccount := handlers.NewDeleteAccountHandler(serviceDeleteAccount)
-
-	repositoryValidToken := repository.NewValidTokenStruct(db)
-	serviceValidToken := service.NewValidToken(repositoryValidToken)
-	handlerValidToken := handlers.NewValidTokenHandler(serviceValidToken)
 
 	mux.HandleFunc("/register", handlerRegister.RegisterHandler)	
 	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
@@ -82,10 +88,10 @@ func main() {
 
 	mux.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
-	mux.HandleFunc("/reset", handlerRequest.RequestHandler)
+	mux.HandleFunc("/reset", handlerRequest.RequestReset)
 	mux.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
 
-	mux.HandleFunc("/valid", handlerValidToken.ValidTokenHandler)
+	mux.HandleFunc("/valid", handlerValidToken.ValidToken)
 
 	handlersWithRecovery := middleware.Recovery(mux)
 	middleware := middleware.CorsMiddleware(handlersWithRecovery)
