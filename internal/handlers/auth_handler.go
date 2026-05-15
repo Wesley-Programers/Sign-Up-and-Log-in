@@ -2,8 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
+	"net/url"
 	"text/template"
 	"time"
 
@@ -25,6 +26,9 @@ type LoginHandler struct {
 type RequestHandler struct {
 	service service.Service
 }
+type ValidTokenHandler struct {
+	service service.Service
+}
 
 
 func NewRegisterHanlder(service *service.Register) *RegisterHandler {
@@ -40,6 +44,11 @@ func NewLoginHandler(service *service.VerifyLogin, limiter *security.RedisLimite
 }
 func NewRequestHandler(s service.Service) *RequestHandler {
 	return &RequestHandler{
+		service: s,
+	}
+}
+func NewValidTokenHandler(s service.Service) *ValidTokenHandler {
+	return &ValidTokenHandler{
 		service: s,
 	}
 }
@@ -66,30 +75,30 @@ func (handler *RegisterHandler) RegisterHandler(w http.ResponseWriter, r *http.R
 	}
 
 	if r.Method == http.MethodPost {
-
-		var req RegisterRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
-			return
-		}
-
-		input := service.RegisterData{
-			Name: req.Name,
-			Email: req.Email,
-			Password: req.Password,
-		}
-	
-		err := handler.Service.RegisterFunction(r.Context(), input)
-		if err != nil {
-			MapServiceError(w, err)
-			return
-		}
-		response.Json(w, http.StatusCreated, map[string]string{"message": "success"})
-	
-	} else {
-		log.Println("ERROR")
-		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
 	}
+
+	var req RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
+		return
+	}
+
+	input := service.RegisterData{
+		Name: req.Name,
+		Email: req.Email,
+		Password: req.Password,
+	}
+
+	err := handler.Service.RegisterFunction(r.Context(), input)
+	if err != nil {
+		MapServiceError(w, err)
+		return
+	}
+
+	response.Json(w, http.StatusCreated, map[string]string{"message": "success"})
+
 }
 
 
@@ -101,53 +110,50 @@ func (login *LoginHandler) HandlerLogin(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if r.Method == http.MethodPost {
-
-		var req LoginRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
-			return
-		}
-
-		key := "login-attempt:" + req.NameOrEmail
-		allowed, err := login.Limiter.CheckLimit(r.Context(), key, 5, 10*time.Minute)
-		if err != nil {
-			response.Error(w, http.StatusInternalServerError, "Internal server error", err)
-			return
-		}
-
-		if !allowed {
-			response.Error(w, http.StatusTooManyRequests, "Too many requests, try again later", err)
-			return
-		}
-
-		input := service.LoginData{
-			Name: req.NameOrEmail,
-			Email: req.NameOrEmail,
-			Password: req.Password,
-		}
-	
-		err, id := login.Service.VerifyLoginFunction(r.Context(), input)
-		if err != nil {
-			MapServiceError(w, err)
-			return
-		}
-
-		login.Limiter.ResetLimit(r.Context(), "login-attempt:"+req.NameOrEmail)
-
-		tokenJwtString, err := service.TokenJWT(id)
-		if err != nil {
-			response.Error(w, http.StatusInternalServerError, "ERROR TRYING TO CREATE A TOKEN", err)
-			return
-		}
-
-		log.Println("SUCCESS")
-		response.Json(w, http.StatusOK, map[string]string{"token": tokenJwtString})
-
-	} else {
-		log.Println("ERROR")
-		http.Error(w, "ERROR", http.StatusMethodNotAllowed)
+		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid credentials", err)
+		return
+	}
+
+	key := "login-attempt:" + req.NameOrEmail
+	allowed, err := login.Limiter.CheckLimit(r.Context(), key, 5, 10*time.Minute)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "Internal server error", err)
+		return
+	}
+
+	if !allowed {
+		response.Error(w, http.StatusTooManyRequests, "Too many requests, try again later", err)
+		return
+	}
+
+	input := service.LoginData{
+		Name: req.NameOrEmail,
+		Email: req.NameOrEmail,
+		Password: req.Password,
+	}
+
+	err, id := login.Service.VerifyLoginFunction(r.Context(), input)
+	if err != nil {
+		MapServiceError(w, err)
+		return
+	}
+
+	login.Limiter.ResetLimit(r.Context(), "login-attempt:"+req.NameOrEmail)
+
+	tokenJwtString, err := security.TokenJWT(id)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "error trying to create a token", err)
+		return
+	}
+
+	response.Json(w, http.StatusOK, map[string]string{"token": tokenJwtString})
+	
 }
 
 
@@ -172,19 +178,20 @@ func (h *RequestHandler) RequestReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.service.RequestReset(r.Context(), req.Email)
+	token, err := h.service.RequestReset(r.Context(), req.Email)
 	if err != nil {
 		MapServiceError(w, err)
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"message": "if email exists, reset link was sent",
+		"redirect": "http://127.0.0.1:8000/valid?token=" + url.QueryEscape(token),
 	})
 }
 
 
-func (h *RequestHandler) ValidToken(w http.ResponseWriter, r *http.Request) {
+func (h *ValidTokenHandler) ValidToken(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
@@ -197,6 +204,7 @@ func (h *RequestHandler) ValidToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	token := r.URL.Query().Get("token")
+	fmt.Println("token: ", token)
 	if token == "" {
 		MapServiceError(w, domain.ErrInvalidToken)
 		return
@@ -208,8 +216,11 @@ func (h *RequestHandler) ValidToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "valid",
-	})
+	data := struct {
+		Token string
+	}{
+		Token: token,
+	}
+
+	tmpl.Execute(w, data)
 }
