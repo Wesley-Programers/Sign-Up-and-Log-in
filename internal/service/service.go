@@ -21,6 +21,7 @@ type Security interface {
 	TokenHash(token string) (string)
 }
 
+
 type Register struct {
 	Repository repository.User
 }
@@ -219,10 +220,6 @@ func (s *service) RequestReset(ctx context.Context, email string) (string, error
 	hash := s.security.TokenHash(token)
 	expiresAt := time.Now().Add(15 * time.Minute)
 
-	if err := s.tokenRepo.InvalidateAll(ctx, user.Id); err != nil {
-		return "", fmt.Errorf("invalidate token: %w", err)
-	}
-
 	if err := s.tokenRepo.Save(ctx, user.Id, hash, expiresAt); err != nil {
 		return "", fmt.Errorf("save token: %w", err)
 	}
@@ -241,16 +238,12 @@ func (s *service) ValidToken(ctx context.Context, token string) (string, error) 
 	if err != nil {
 		return "", domain.ErrInvalidToken
 	}
-
-	if err := s.tokenRepo.MarkUsed(ctx, hash); err != nil {
-		return "", fmt.Errorf("mark token used: %w", err)
-	}
 	
 	return userID, nil
 }
 
 
-func (r *ResetPassword) ResetPasswordFunction(ctx context.Context, token string, input ResetPasswordData) error {
+func (r *ResetPassword) ResetPasswordFunction(ctx context.Context, token_hash string, input ResetPasswordData) error {
 	if input.NewPasword != input.ConfirmPassword {
 		return errors.New("password do not match")
 	}
@@ -260,7 +253,7 @@ func (r *ResetPassword) ResetPasswordFunction(ctx context.Context, token string,
 		return errors.New(msg)
 	}
 
-	err := r.Repository.AllowReset(ctx, token)
+	err := r.Repository.AllowReset(ctx, token_hash)
 	if err != nil {
 		return fmt.Errorf("rate limiter error: %w", err)
 	}
@@ -269,10 +262,14 @@ func (r *ResetPassword) ResetPasswordFunction(ctx context.Context, token string,
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
-
-	err = r.Repository.UpdatePassword(ctx, []byte(token), hashedPassword)
+	
+	err = r.Repository.UpdatePassword(ctx, []byte(token_hash), hashedPassword)
 	if err != nil {
 		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	if err := r.Repository.MarkUsed(ctx, token_hash); err != nil {
+		return fmt.Errorf("mark token used: %w", err)
 	}
 
 	return nil
