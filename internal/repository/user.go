@@ -191,18 +191,8 @@ func(r *RequestStruct) GetByEmail(ctx context.Context, email string) (*domain.Us
 }
 
 
-func (v *ValidTokenStruct) InvalidateAll(ctx context.Context, userID int) error {
-	_, err := v.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE user_id = ? AND used = FALSE`, userID)
-	if err != nil {
-		return fmt.Errorf("invalidate tokens: %w", err)
-	}
-
-	return nil
-}
-
-
 func (v *ValidTokenStruct) Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
-	_, err := v.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
+	_, err := v.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
 	if err != nil {
 		return fmt.Errorf("save reset token: %w", err)
 	}
@@ -226,17 +216,7 @@ func (v *ValidTokenStruct) FindValid(ctx context.Context, tokenHash string) (str
 }
 
 
-func (v *ValidTokenStruct) MarkUsed(ctx context.Context, tokenHash string) error {
-	_, err := v.Database.ExecContext(ctx, `UPDATE reset_password SET used = TRUE WHERE token_hash = ?`, tokenHash)
-	if err != nil {
-		return fmt.Errorf("mark token used: %w", err)
-	}
-
-	return  nil
-}
-
-
-func (r *ResetPasswordStruct) AllowResetAttempt(ctx context.Context, email string) error {
+func (r *ResetPasswordStruct) AllowReset(ctx context.Context, email string) error {
 
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -324,38 +304,14 @@ func RemoveExpiredToken(database *sql.DB) error {
 }
 
 
-func (r *ResetPasswordStruct) UpdatePassword(ctx context.Context, tokenHash []byte, passwordHash string) error {
+func (r *ResetPasswordStruct) UpdatePassword(ctx context.Context, userID string, passwordHash string) error {
 	
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	tx, err := r.Database.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("begin tx failed: %w", err)
-	}
-
-	result, err := tx.ExecContext(ctx, `UPDATE reset_password SET used = true, consumed_at = NOW() WHERE token_hash = ? AND used = false AND expires_at > NOW()`, tokenHash)
-	if err != nil {
-		return fmt.Errorf("consume token failed: %w", err)
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("rows affected failed: %w", err)
-	}
-
-	if rowsAffected != 1 {
-		return domain.ErrInvalidToken
-	}
-
-	_, err = tx.ExecContext(ctx, `UPDATE users u INNER JOIN reset_password rp ON rp.user_id = u.id SET u.password = ? WHERE rp.token = ?`, passwordHash, tokenHash)
+	_, err := r.Database.ExecContext(ctx, `UPDATE users SET password_hash = ? WHERE id = ?`, passwordHash, userID)
 	if err != nil {
 		return fmt.Errorf("update password failed: %w", err)
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		return fmt.Errorf("commit failed: %w", err)
 	}
 
 	return nil
