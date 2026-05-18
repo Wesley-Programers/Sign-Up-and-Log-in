@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"time"
 
 	"ShieldAuth-API/internal/domain"
 )
@@ -29,16 +28,8 @@ type UserRepository interface {
 	GetByEmail(ctx context.Context, email string) (*domain.User, error)
 }
 
-type ResetTokenRepository interface {
-	Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error
-	FindValid(ctx context.Context, tokenHash string) (string, error)
-	InvalidateAll(ctx context.Context, userID int) error
-}
-
 type ResetPassword interface {
-	AllowReset(ctx context.Context, email string) (error)
-	MarkUsed(ctx context.Context, tokenHash string) error
-	UpdatePassword(ctx context.Context, tokenHash []byte, passwordHash string) error
+	UpdatePassword(ctx context.Context, userID string, passwordHash string) error
 }
 
 type DeleteAccount interface {
