@@ -7,10 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let incorrectPassword = document.getElementById("incorrectPassword");
 
     let forgotPassword = document.getElementById("forgotPassword");
-    let inputEmailForResetPassword = document.getElementById("inputEmailForResetPassword");
-    let reset = document.getElementById("reset");
-    let formEmailForResetPassword = document.getElementById("formEmailForResetPassword");
-    let emailForReset = document.getElementById("emailForReset");
+    let reset = document.getElementById("reset-section");
+    let emailForResetPassword = document.getElementById("formEmailForResetPassword");
     let leave = document.getElementById("leave");
 
     let dontHaveAccount = document.getElementById("dontHaveAccount");
@@ -21,13 +19,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     forgotPassword.addEventListener("click", () => {
         reset.style.display = 'block';
-        emailForReset.style.display = 'block';
-        // passwordForReset.style.display = 'none';
     });
 
     leave.addEventListener("click", () => {
         reset.style.display = 'none';
-        inputEmailForResetPassword.value = '';
     });
     
 
@@ -57,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const status = fetchLogin.status
-            const message = await fetchLogin.text();
+            const message = await fetchLogin.json();
             alert(`Status: ${status} Message: ${message}`);
 
             if (status === 200) {
@@ -65,9 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 incorrectEmail.style.display = 'none';
                 incorrectPassword.style.display = 'none';
 
-                if (message.token) {
-                    localStorage.setItem("jwt_key", message.token);
-                };
+                localStorage.setItem("jwt_key", message.token);
 
                 setTimeout(() => {
                     window.location.href = '../html/mainAccount.html'
@@ -105,37 +98,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     
-    formEmailForResetPassword.addEventListener("submit", async (form) => {
+    emailForResetPassword.addEventListener("submit", async (form) => {
         let button = document.getElementById("button");
+        let link = document.getElementById("link");
 
         form.preventDefault();
-        button.disabled = true;
         const formData = new FormData(form.target);
+        const data = Object.fromEntries(formData.entries());
 
+        // button.disabled = true;
         try {
 
             const resetFetch = await fetch("http://127.0.0.1:8000/reset", {
                 method: "POST",
-                body: formData,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+                body: JSON.stringify(data),
             })
 
             const status = resetFetch.status
             const message = await resetFetch.text()
             alert(`Status: ${status} Message: ${message}`);
-
-            if (status === 303 || status === 200) {
-            
-            } else if (status === 400) {
-                alert("INVALID EMAIL");
-                invalidEmail.style.display = 'block';
-            }
+            window.location.href = message.redirect
 
         } catch (error) {
             console.error("ERROR: ", error);
             alert("SOME ERROR");
 
         } finally {
-            button.disabled = false;
+            // button.disabled = false;
         };
     });
 });
