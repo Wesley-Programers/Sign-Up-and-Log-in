@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -15,16 +15,19 @@ import (
 	"ShieldAuth-API/internal/service"
 
 	"github.com/joho/godotenv"
+	"github.com/redis/go-redis/v9"
 )
 
 func main() {
 
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file was not found")
+		log.Fatal("Warning: .env file was not found")
 	}
-	jwtKey := os.Getenv("JWT_KEY")
 
-	limiter, err := security.NewRedisLimiter("")
+	jwtKey := os.Getenv("JWT_KEY")
+	redisAddr := os.Getenv("REDIS_ADDR")
+
+	limiter, err := security.NewRedisLimiter(redisAddr)
 	if err != nil {
 		log.Fatalf("Error connecting to Redis: %v", err)
 	}
@@ -33,7 +36,7 @@ func main() {
 	defer db.Close()
 	database.RunMigrations(db)
 
-	go service.StartToRemoverExpiredTokens(db)
+	// go service.StartToRemoverExpiredTokens(db)
 	mux := http.NewServeMux()
 
 	repositoryRegister := repository.NewRegisterStruct(db)
@@ -53,25 +56,38 @@ func main() {
 	handlerChangeEmail := handlers.NewChangeEmailHandler(serviceChangeEmail)
 
 	userRepo := repository.NewRequestStruct(db)
-	tokenRepo := repository.NewValidTokenStruct(db)
-	security := security.Security()
+	sec := security.Security()
+
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr, DB: 0})
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("redis ping failed: %v", err)
+	}
+
+	resetStore := security.NewResetPassword(rdb)
 	serviceRequest := service.NewService(
 		userRepo,
-		tokenRepo,
-		security,
+		sec,
+		resetStore,
+		limiter,
 	)
 	handlerRequest := handlers.NewRequestHandler(serviceRequest)
 	handlerValidToken := handlers.NewValidTokenHandler(serviceRequest)
 
 	repositoryResetPassword := repository.NewResetPasswordStruct(db)
-	serviceResetPassword := service.NewResetPassword(repositoryResetPassword)
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		log.Fatalf("redis ping failed: %v", err)
+	}
+
+	securityReset := security.NewResetPassword(rdb)
+
+	serviceResetPassword := service.NewResetPassword(repositoryResetPassword, securityReset)
 	handlerResetPassword := handlers.NewResetPasswordHandler(serviceResetPassword)
 
 	repositoryDeleteAccount := repository.NewDeleteAccountStruct(db)
 	serviceDeleteAccount := service.NewDeleteAccount(repositoryDeleteAccount)
 	handlerDeleteAccount := handlers.NewDeleteAccountHandler(serviceDeleteAccount)
 
-	mux.HandleFunc("/register", handlerRegister.RegisterHandler)	
+	mux.HandleFunc("/register", handlerRegister.RegisterHandler)
 	mux.HandleFunc("/login", handlerLogin.HandlerLogin)
 
 	auth := middleware.AuthMiddleware(jwtKey)
@@ -89,13 +105,13 @@ func main() {
 	mux.HandleFunc("/delete", handlerDeleteAccount.DeleteAccountHandler)
 
 	mux.HandleFunc("/reset", handlerRequest.RequestReset)
-	mux.HandleFunc("/reset/password", handlerResetPassword.ResetPasswordHandler)
+	mux.Handle("/reset/password", middleware.AuthMiddleware(jwtKey)(http.HandlerFunc(handlerResetPassword.ResetPasswordHandler)))
 
 	mux.HandleFunc("/valid", handlerValidToken.ValidToken)
 
 	handlersWithRecovery := middleware.Recovery(mux)
 	middleware := middleware.CorsMiddleware(handlersWithRecovery)
 
-	fmt.Println("SERVER OPEN WITH GOLANG")
+	log.Println("SERVER OPEN WITH GOLANG")
 	log.Fatal(http.ListenAndServe("127.0.0.1:8000", middleware))
 }
