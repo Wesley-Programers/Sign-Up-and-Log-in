@@ -1,21 +1,28 @@
 package middleware
 
 import (
-	"net/http"
 	"context"
-	"strings"
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
 type ContextKey string
-const UserIDKey ContextKey = "userID"
+const Key ContextKey = "userID"
+
+type Claims struct {
+	UserID int `json:"sub"`
+	jwt.RegisteredClaims
+}
+type AuthContext struct {
+	UserID int
+	TokenHash string
+}
 
 func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
-
 	return func(next http.Handler) http.Handler {
-
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	
 			authHeader := r.Header.Get("Authorization")
@@ -25,38 +32,48 @@ func AuthMiddleware(secretKey string) func(http.Handler) http.Handler {
 			}
 	
 			tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-			token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
-				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("unexpected signing: %v", t.Header["alg"])
-				}
-				return []byte(secretKey), nil
-			})
 
-			if len(tokenString) < 10 || tokenString == "null" {
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
-				return 
+			if tokenString == "" || tokenString == "null" {
+				http.Error(w, "invalid token", http.StatusUnauthorized)
+				return
 			}
+
+			claims := &Claims{}
+
+			token, err := jwt.ParseWithClaims(tokenString, claims, func(t *jwt.Token) (interface{}, error) {
+				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("unexpected signing method")
+				}
+
+				return []byte(secretKey), nil
+			},)
 	
 			if err != nil || !token.Valid {
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
-				return
-			}
-	
-			claims, ok := token.Claims.(jwt.MapClaims)
-			if !ok {
-				http.Error(w, "Invalid claims", http.StatusUnauthorized)
-				return
-			}
-	
-			sub, ok := claims["sub"]
-			if !ok || sub == "" {
-				http.Error(w, "Invalid subject", http.StatusUnauthorized)
+				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
 
-			userID := fmt.Sprintf("%v", sub)
+			secondClaims := token.Claims.(jwt.MapClaims)
+			jti, ok := secondClaims["jti"].(string)
+			if !ok {
+				http.Error(w, "invalid token jti", http.StatusUnauthorized)
+				return
+			}
+
+			sub, ok := secondClaims["sub"].(float64)
+			if !ok {
+				http.Error(w, "invalid token sub", http.StatusUnauthorized)
+				return
+			}
+
+			userID := int(sub)
+
+			auth := AuthContext{
+				UserID: userID,
+				TokenHash: jti,
+			}
 	
-			ctx := context.WithValue(r.Context(), UserIDKey, userID)
+			ctx := context.WithValue(r.Context(), Key, auth)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
