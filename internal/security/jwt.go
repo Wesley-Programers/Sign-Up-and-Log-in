@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 
@@ -13,6 +14,7 @@ func TokenJWT(userID int) (string, error) {
 		"sub": userID,
 		"exp": time.Now().Add(time.Hour * 24).Unix(),
 		"iat": time.Now().Unix(),
+		"jti": uuid.NewString(),
 	}
 
 	tokenJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
