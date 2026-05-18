@@ -191,58 +191,6 @@ func(r *RequestStruct) GetByEmail(ctx context.Context, email string) (*domain.Us
 }
 
 
-func (v *ValidTokenStruct) Save(ctx context.Context, userID int, tokenHash string, expiresAt time.Time) error {
-	_, err := v.Database.ExecContext(ctx, `INSERT INTO reset_password (user_id, token_hash, expires_at, used) VALUES (?, ?, ?, FALSE)`, userID, tokenHash, expiresAt)
-	if err != nil {
-		return fmt.Errorf("save reset token: %w", err)
-	}
-
-	return nil
-}
-
-
-func (v *ValidTokenStruct) FindValid(ctx context.Context, tokenHash string) (string, error) {
-	var userID string
-
-	err := v.Database.QueryRowContext(ctx, `SELECT user_id FROM reset_password WHERE token_hash = ? AND used = FALSE AND expires_at > ?`, tokenHash, time.Now()).Scan(&userID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", domain.ErrInvalidToken
-		}
-		return "", fmt.Errorf("find valid token: %w", err)
-	}
-
-	return userID, nil
-}
-
-
-func (r *ResetPasswordStruct) AllowReset(ctx context.Context, email string) error {
-
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-	defer cancel()
-
-	key := fmt.Sprintf("reset_attempts:%s", email)
-
-	count, err := r.redis.Incr(ctx, key).Result()
-	if err != nil {
-		return fmt.Errorf("redis incr failed: %w", err)
-	}
-
-	if count == 1 {
-		err = r.redis.Expire(ctx, key, time.Hour).Err()
-		if err != nil {
-			return fmt.Errorf("redis expire failed: %w", err)
-		}
-	}
-
-	if count > 5 {
-		return fmt.Errorf("too many attempts")
-	}
-
-	return nil
-}
-
-
 func (deleteAccount *DeleteAccountStruct) DeleteAccount(ctx context.Context, email, password string) error {
 
 	tx, err := deleteAccount.Database.BeginTx(ctx, nil)
