@@ -11,9 +11,8 @@
         <h2>Reset Password</h2>
 
         <form id="resetForm">
-            <label>Current password</label>
-            <input type="password" name="currentPassword" id="" required>
-
+            <input type="hidden" name="token" value="{{.Token}}">
+    
             <label>New password</label>
             <input type="password" name="newPassword" id="" required>
 
@@ -32,42 +31,37 @@
         const button = document.getElementById("button");
         const message = document.getElementById("message");
 
-        function showMessage(text, type) {
-            message.textContent = text;
-            message.className = "message" = type;
-        };
-
-        form.addEventListener("click", async (e) => {
+        form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            const data = new FormData(form);
-            const current = data.get("currentPassword");
-            const newPassword = data.get("newPassword");
-            const confirm = data.get("confirmPassword");
-
-            if (newPassword !== confirm) {
-                showMessage("Password do not match", "error");
-                return;
-            }
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
 
             button.disabled = true;
             try {
 
-                const res = await fetch("http:/127.0.0.1:8000/reset/password", {
+                const res = await fetch("http://127.0.0.1:8000/reset/password", {
                     method: "POST",
-                    body: new URLSearchParams(data)
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                    body: JSON.stringify(data),
                 });
 
-                const text = await res.text();
+                const status = res.status
+                const message = await res.text();
+                alert(`Status: ${status} Message: ${message}`);
 
-                if (res.ok) {
-                    showMessage("Password updated successfully", "success")
+                if (res === 200) {
+                    alert("success")
                 } else {
-                    showMessage(text || "Error resetting password", "error")
+                    alert("some error")
                 }
 
             } catch (err) {
-                showMessage("Network error", "error")
+                alert("ERROR")
+                console.error("error: ", err)
             } finally {
                 button.disabled = false;
             };
