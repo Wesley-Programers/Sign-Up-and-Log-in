@@ -95,7 +95,7 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 		PasswordHash: password,
 	}
 
-	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password) VALUES (?, ?, ?)", u.Name, u.Email, u.PasswordHash)
+	_, err := register.Database.ExecContext(ctx, "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)", u.Name, u.Email, u.PasswordHash)
 	if err != nil {
 		if mySQLError, ok := errors.AsType[*mysql.MySQLError](err); ok {
 			if mySQLError.Number == 1062 {
@@ -111,7 +111,7 @@ func (register *RegisterStruct) Register(ctx context.Context, name, email, passw
 func (loginStruct *VerifyLoginStruct) GetByCredentials(ctx context.Context, u domain.User) (*domain.User, error) {
 	user := &domain.User{}
 
-	query := "SELECT id, name, email, password FROM users WHERE name = ? OR email = ? LIMIT 1"
+	query := "SELECT id, name, email, password_hash FROM users WHERE name = ? OR email = ? LIMIT 1"
 	err := loginStruct.Database.QueryRowContext(ctx, query, u.Name, u.Email).Scan(&user.Id, &user.Name, &user.Email, &user.PasswordHash)
 	if err != nil {	
 		if errors.Is(err, sql.ErrNoRows) {
@@ -139,12 +139,12 @@ func (changeName *ChangeNameStruct) GetID(ctx context.Context, id int) (*domain.
 		return nil, err
 	}
 
-	return domain.RestoreName(test.ID, test.Name), nil
+	return domain.RestoreUser(test.ID, test.Name, "", ""), nil
 }
 
 func (changeName *ChangeNameStruct) UpdateName(ctx context.Context, user *domain.User) error {
 	query := "UPDATE users SET name = ? WHERE id = ?"
-	_, err := changeName.Database.ExecContext(ctx, query, user.NAME(), user.ID())
+	_, err := changeName.Database.ExecContext(ctx, query, user.Name, user.Id)
 	return err
 }
 
@@ -156,7 +156,7 @@ func (changeEmail *ChangeEmailStruct) GetID(ctx context.Context, id int) (*domai
 		PasswordHash string
 	}
 
-	query := "SELECT id, email, password FROM users WHERE id = ?"
+	query := "SELECT id, email, password_hash FROM users WHERE id = ?"
 	err := changeEmail.Database.QueryRowContext(ctx, query, id).Scan(&test.ID, &test.Email, &test.PasswordHash)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -165,13 +165,13 @@ func (changeEmail *ChangeEmailStruct) GetID(ctx context.Context, id int) (*domai
 		return nil, err
 	}
 	
-	return domain.RestoreEmail(test.ID, test.Email, test.PasswordHash), nil
+	return domain.RestoreUser(test.ID, "", test.Email, test.PasswordHash), nil
 }
 
 
 func (changeEmail *ChangeEmailStruct) UpdateEmail(ctx context.Context, user *domain.User) error {
 	query := "UPDATE users SET email = ? WHERE id = ?"
-	_, err := changeEmail.Database.ExecContext(ctx, query, user.EMAIL(), user.ID())
+	_, err := changeEmail.Database.ExecContext(ctx, query, user.Email, user.Id)
 	return err
 }
 
