@@ -2,143 +2,103 @@ package domain
 
 import (
 	"strings"
+	"net/mail"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	Id int
-	Name string
-	Email string
-	PasswordHash string
-}
-
-func (user *User) ID() int { return user.Id }
-func (user *User) NAME() string { return user.Name }
-func (user *User) EMAIL() string { return user.Email }
-
-
-func (user *User) ChangeEmail(currentEmail, newEmail, confirmNewEmail string) error {
-	
-	if newEmail != confirmNewEmail {
-		return ErrEmailMismatch
-	}
-
-	if !strings.EqualFold(currentEmail, user.Email) {
-		return ErrEmailMismatch
-	}
-
-	if strings.EqualFold(newEmail, user.Email) {
-		return ErrEmailIsTheSame
-	}
-
-	if !strings.HasSuffix(newEmail, "@example.com") {
-		return ErrInvalidEmailFormat
-	}
-
-	user.Email = strings.ToLower(newEmail)
-	return nil
+	Id 				int
+	Name 			string
+	Email 			string
+	PasswordHash 	string
 }
 
 
-func (user *User) ChangeName(currentName, newName string) error {
+func NewUser(name, email, passwordHash string) (*User, error) {
+	cleanName := strings.TrimSpace(name)
+	cleanEmail := strings.TrimSpace(strings.ToLower(email))
 
-	if !strings.EqualFold(currentName, user.Name) {
-		return ErrUserNotFound
-	}
-
-	if strings.EqualFold(newName, user.Name) {
-		return ErrNameIsTheSame
-	}
-
-	user.Name = strings.ToLower(newName)
-	return nil
-}
-
-
-func (user *User) Login(nameOrEmail, password string) error {
-
-	if strings.HasSuffix(nameOrEmail, "@example.com") {
-		if !strings.EqualFold(nameOrEmail, user.Email) {
-			return ErrUserNotFound
-		}
-
-	} else {
-		if !strings.EqualFold(nameOrEmail, user.Name) {
-			return ErrUserNotFound
-		}
-	}
-
-	return nil
-}
-
-
-func (user *User) Register(name, email, password string) (*User, error) {
-	if name == "" || email == "" {
+	if cleanName == "" {
 		return nil, ErrInvalidCredentials
 	}
 
-	cleanName := strings.TrimSpace(name)
-	cleanEmail := strings.TrimSpace(email)
-
-	if !strings.HasSuffix(cleanEmail, "@example.com") {
+	if !isValidEmail(cleanEmail) {
 		return nil, ErrInvalidEmailFormat
 	}
 
 	return &User{
-		Name: strings.ToLower(cleanName),
-		Email : strings.ToLower(cleanEmail),
-		PasswordHash: password,
+		Name: cleanName,
+		Email: cleanEmail,
+		PasswordHash: passwordHash,
 	}, nil
 }
 
+func RestoreUser(
+	id int,
+	name string,
+	email string,
+	passwordHash string,
+) *User {
+	return &User{
+		Id: id,
+		Name: name,
+		Email: email,
+		PasswordHash: passwordHash,
+	}
+}
 
-func (user *User) RequestPasswordReset(email string) error {
-	cleanEmail := strings.TrimSpace(email)
-	if !strings.HasSuffix(cleanEmail, "@example.com") || cleanEmail == "" {
+func (u *User) ChangeEmail(currentEmail, newEmail, confirmNewEmail string) error {
+	currentEmail = strings.TrimSpace(strings.ToLower(currentEmail))
+	newEmail = strings.TrimSpace(strings.ToLower(newEmail))
+	confirmNewEmail = strings.TrimSpace(strings.ToLower(confirmNewEmail))
+
+	if !strings.EqualFold(currentEmail, u.Email) {
+		return ErrEmailMismatch
+	}
+
+	if newEmail != confirmNewEmail {
+		return ErrEmailMismatch
+	}
+
+	if strings.EqualFold(newEmail, u.Email) {
+		return ErrEmailIsTheSame
+	}
+
+	if !isValidEmail(newEmail) {
 		return ErrInvalidEmailFormat
 	}
 
-	if !strings.EqualFold(cleanEmail, user.Email) {
-		return ErrUserNotFound
-	}
-	
+	u.Email = newEmail
 	return nil
 }
 
 
-func (user *User) PasswordValid(password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+func (u *User) ChangeName(currentName, newName string) error {
+	currentName = strings.TrimSpace(currentName)
+	newName = strings.TrimSpace(newName)
+
+	if !strings.EqualFold(currentName, u.Name) {
+		return ErrInvalidCredentials
+	}
+
+	if strings.EqualFold(newName, u.Name) {
+		return ErrNameIsTheSame
+	}
+
+	if newName == "" {
+		return ErrInvalidCredentials
+	}
+
+	u.Name = newName
+	return nil
 }
 
-
-func RestoreEmail(id int, email, passwordHash string) *User {
-	return &User{
-		Id: id,
-		Email: email,
-		PasswordHash: passwordHash,
-	}
+func (u *User) CheckPassword(password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password))
 }
 
-func RestoreName(id int, name string) *User {
-	return &User{
-		Id: id,
-		Name: name,
-	}
-}
-
-func RestoreLogin(id int, name, email, passwordHash string) *User {
-	return &User{
-		Id: id,
-		Name: name,
-		Email: email,
-		PasswordHash: passwordHash,
-	}
-}
-
-func RestoreRequest(id int, email string) *User {
-	return &User{
-		Id: id,
-		Email: email,
-	}
+func isValidEmail(email string) bool {
+	_, err := mail.ParseAddress(email)
+	return err == nil
 }
